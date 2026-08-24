@@ -5,6 +5,7 @@ const navSections = [
     title: 'Operations',
     items: [
       { label: 'Rooms', path: '/rooms' },
+      { label: 'Housekeeping', path: '/housekeeping' },
       { label: 'Reservations', path: '/reservations' },
       { label: 'Guests', path: '/guests' },
       { label: 'Check-In', path: '/check-in' },
@@ -37,6 +38,7 @@ const sidebarItems = [
 const iconMap = {
   Dashboard: '◫',
   Rooms: '▣',
+  Housekeeping: '🧹',
   Reservations: '☰',
   Guests: '◍',
   'Check-In': '✓',
