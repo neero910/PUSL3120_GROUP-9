@@ -643,6 +643,35 @@ th {
   min-width: 180px;
 }
 
+.reservation-toolbar .search-box {
+  min-width: min(320px, 100%);
+}
+
+.date-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.date-filter input {
+  min-width: 164px;
+}
+
+.results-summary {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.results-summary strong {
+  color: var(--text);
+}
+
 .toolbar select:focus,
 .toolbar input:focus {
   border-color: var(--primary);
@@ -2472,5 +2501,19 @@ th {
   .room-controls-row {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .reservation-toolbar .search-box,
+  .reservation-toolbar select,
+  .reservation-toolbar .date-filter {
+    width: 100%;
+  }
+
+  .date-filter {
+    justify-content: space-between;
+  }
+
+  .date-filter input {
+    flex: 1;
   }
 }

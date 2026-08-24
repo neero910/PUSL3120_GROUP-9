@@ -36,6 +36,12 @@ function ReservationTable({ reservations }) {
             ))}
           </tbody>
         </table>
+        {!reservations.length && (
+          <div className="empty-state">
+            <strong>No reservations found</strong>
+            <span>Try a different guest, room, status or stay date.</span>
+          </div>
+        )}
       </div>
     </div>
   )
