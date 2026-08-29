@@ -23,7 +23,7 @@ function Invoices() {
     return matchesSearch && (statusFilter === 'All Status' || invoice.paymentStatus === statusFilter)
   }), [invoices, searchTerm, statusFilter])
 
-  const outstandingTotal = invoices.filter((invoice) => invoice.paymentStatus === 'Pending').reduce((total, invoice) => total + Number(String(invoice.amount).replace(/[^0-9]/g, '')), 0)
+  const outstandingTotal = invoices.filter((invoice) => invoice.paymentStatus === 'Pending').reduce((total, invoice) => total + Number(String(invoice.amount).replace(/[^0-9.-]/g, '')), 0)
 
   return (
     <div className="page-stack">

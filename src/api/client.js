@@ -2,8 +2,8 @@ const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/$/
 
 async function request(path, options = {}) {
   const response = await fetch(`${API_BASE_URL}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...options.headers },
     ...options,
+    headers: { 'Content-Type': 'application/json', ...options.headers },
   })
   const contentType = response.headers.get('content-type') || ''
   const body = contentType.includes('application/json') ? await response.json() : null
@@ -15,19 +15,19 @@ async function request(path, options = {}) {
   return body
 }
 
-function listFromResponse(body) {
-  return Array.isArray(body) ? body : body?.data || []
+function asList(response) {
+  return Array.isArray(response) ? response : response?.data || []
 }
 
 export const api = {
   async getMenuItems() {
-    return listFromResponse(await request('/menu-items'))
+    return asList(await request('/menu-items'))
   },
   async createOrder(order) {
     return request('/orders', { method: 'POST', body: JSON.stringify(order) })
   },
   async getPayments() {
-    return listFromResponse(await request('/payments'))
+    return asList(await request('/payments'))
   },
   async markPaymentAsPaid(paymentId) {
     return request(`/payments/${encodeURIComponent(paymentId)}`, {
@@ -36,6 +36,6 @@ export const api = {
     })
   },
   async getInvoices() {
-    return listFromResponse(await request('/invoices'))
+    return asList(await request('/invoices'))
   },
 }
