@@ -1,38 +1,37 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import PageHeader from '../components/layout/PageHeader'
+import { api } from '../api/client'
 
 const categories = ['All', 'Breakfast', 'Main Course', 'Beverages', 'Desserts']
 
-const foodItems = [
-  { name: 'Chicken Fried Rice', price: 1800, category: 'Main Course' },
-  { name: 'Chicken Kottu', price: 1600, category: 'Main Course' },
-  { name: 'String Hoppers', price: 900, category: 'Breakfast' },
-  { name: 'Tea', price: 400, category: 'Beverages' },
-  { name: 'Grilled Fish', price: 2200, category: 'Main Course' },
-  { name: 'Fresh Lime Juice', price: 500, category: 'Beverages' },
-  { name: 'Fruit Plate', price: 1200, category: 'Desserts' },
-  { name: 'Watalappam', price: 700, category: 'Desserts' },
-]
-
 function Restaurant() {
   const [selectedCategory, setSelectedCategory] = useState('All')
-  const [cart, setCart] = useState([
-    { ...foodItems[1], quantity: 1 },
-    { ...foodItems[3], quantity: 1 },
-  ])
+  const [foodItems, setFoodItems] = useState([])
+  const [cart, setCart] = useState([])
   const [room, setRoom] = useState('305')
   const [orderNote, setOrderNote] = useState('')
   const [orderMessage, setOrderMessage] = useState('')
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    api.getMenuItems()
+      .then(setFoodItems)
+      .catch((loadError) => setError(loadError.message))
+      .finally(() => setIsLoading(false))
+  }, [])
 
   const visibleItems = useMemo(
     () => selectedCategory === 'All'
       ? foodItems
       : foodItems.filter((item) => item.category === selectedCategory),
-    [selectedCategory],
+    [foodItems, selectedCategory],
   )
 
-  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
-  const formatPrice = (price) => `LKR ${price.toLocaleString()}`
+  const amountValue = (amount) => Number(String(amount).replace(/[^0-9.-]/g, ''))
+  const total = cart.reduce((sum, item) => sum + amountValue(item.price) * item.quantity, 0)
+  const formatPrice = (price) => `LKR ${amountValue(price).toLocaleString()}`
 
   function addToCart(item) {
     setOrderMessage('')
@@ -53,9 +52,20 @@ function Restaurant() {
       .filter((item) => item.quantity > 0))
   }
 
-  function placeOrder() {
+  async function placeOrder() {
     if (!cart.length) return
-    setOrderMessage(`Order sent to room ${room}`)
+    setIsSubmitting(true)
+    setError('')
+    try {
+      await api.createOrder({ room, note: orderNote, items: cart, total })
+      setOrderMessage(`Order sent to room ${room}`)
+      setCart([])
+      setOrderNote('')
+    } catch (submitError) {
+      setError(submitError.message)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -81,6 +91,8 @@ function Restaurant() {
           </div>
 
           <div className="menu-grid">
+            {isLoading && <p className="muted-text">Loading menu...</p>}
+            {!isLoading && !visibleItems.length && <p className="empty-state">No menu items available.</p>}
             {visibleItems.map((item) => (
               <div key={item.name} className="menu-item">
                 <div>
@@ -128,8 +140,9 @@ function Restaurant() {
           </select>
           <label className="field-label" htmlFor="order-note">Special instructions</label>
           <textarea id="order-note" value={orderNote} onChange={(event) => setOrderNote(event.target.value)} placeholder="Optional note for the kitchen" rows="2" />
-          <button type="button" className="primary-button full-button" onClick={placeOrder} disabled={!cart.length}>Place order</button>
+          <button type="button" className="primary-button full-button" onClick={placeOrder} disabled={!cart.length || isSubmitting}>{isSubmitting ? 'Sending...' : 'Place order'}</button>
           {orderMessage && <p className="success-message" role="status">{orderMessage}</p>}
+          {error && <p className="error-message" role="alert">{error}</p>}
         </div>
       </div>
     </div>

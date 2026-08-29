@@ -1,12 +1,21 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import PageHeader from '../components/layout/PageHeader'
-import { paymentData } from '../data/users'
+import { api } from '../api/client'
 
 function Payments() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('All Status')
   const [methodFilter, setMethodFilter] = useState('All Methods')
-  const [payments, setPayments] = useState(paymentData)
+  const [payments, setPayments] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    api.getPayments()
+      .then(setPayments)
+      .catch((loadError) => setError(loadError.message))
+      .finally(() => setIsLoading(false))
+  }, [])
 
   const filteredPayments = useMemo(() => payments.filter((payment) => {
     const search = searchTerm.toLowerCase()
@@ -16,11 +25,20 @@ function Payments() {
     return matchesSearch && matchesStatus && matchesMethod
   }), [methodFilter, payments, searchTerm, statusFilter])
 
-  const paidTotal = payments.filter((payment) => payment.status === 'Paid').reduce((total, payment) => total + Number(payment.amount.replace(/[^0-9]/g, '')), 0)
-  const pendingTotal = payments.filter((payment) => payment.status === 'Pending').reduce((total, payment) => total + Number(payment.amount.replace(/[^0-9]/g, '')), 0)
+  const amountValue = (amount) => Number(String(amount).replace(/[^0-9.-]/g, ''))
+  const paidTotal = payments.filter((payment) => payment.status === 'Paid').reduce((total, payment) => total + amountValue(payment.amount), 0)
+  const pendingTotal = payments.filter((payment) => payment.status === 'Pending').reduce((total, payment) => total + amountValue(payment.amount), 0)
 
-  function markAsPaid(paymentId) {
-    setPayments((currentPayments) => currentPayments.map((payment) => payment.id === paymentId ? { ...payment, status: 'Paid' } : payment))
+  async function markAsPaid(paymentId) {
+    setError('')
+    try {
+      const updatedPayment = await api.markPaymentAsPaid(paymentId)
+      setPayments((currentPayments) => currentPayments.map((payment) => payment.id === paymentId
+        ? { ...payment, ...updatedPayment, status: updatedPayment?.status || 'Paid' }
+        : payment))
+    } catch (updateError) {
+      setError(updateError.message)
+    }
   }
 
   return (
@@ -46,6 +64,7 @@ function Payments() {
             <option>All Methods</option><option>Card</option><option>Cash</option><option>Bank Transfer</option>
           </select>
         </div>
+        {error && <p className="error-message" role="alert">{error}</p>}
         <div className="table-caption">Showing {filteredPayments.length} of {payments.length} transactions</div>
         <div className="table-wrapper">
           <table>
@@ -61,7 +80,8 @@ function Payments() {
               </tr>
             </thead>
             <tbody>
-              {filteredPayments.map((payment) => (
+              {isLoading && <tr><td colSpan="7">Loading payments...</td></tr>}
+              {!isLoading && filteredPayments.map((payment) => (
                 <tr key={payment.id}>
                   <td>{payment.id}</td>
                   <td>{payment.guest}</td>
