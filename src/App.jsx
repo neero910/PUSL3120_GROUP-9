@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-route
 import MainLayout from './components/layout/MainLayout'
 import Dashboard from './pages/Dashboard'
 import Rooms from './pages/Rooms'
+import Housekeeping from './pages/Housekeeping'
 import Guests from './pages/Guests'
 import Reservations from './pages/Reservations'
 import CheckIn from './pages/CheckIn'
@@ -18,7 +19,8 @@ function AppContent() {
 
   const titles = {
     '/dashboard': 'Dashboard',
-    '/rooms': 'Rooms',
+    '/rooms': 'Rooms Management',
+    '/housekeeping': 'Housekeeping Operations',
     '/guests': 'Guests',
     '/reservations': 'Reservations',
     '/check-in': 'Check-In',
@@ -37,6 +39,7 @@ function AppContent() {
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/rooms" element={<Rooms />} />
+        <Route path="/housekeeping" element={<Housekeeping />} />
         <Route path="/guests" element={<Guests />} />
         <Route path="/reservations" element={<Reservations />} />
         <Route path="/check-in" element={<CheckIn />} />
