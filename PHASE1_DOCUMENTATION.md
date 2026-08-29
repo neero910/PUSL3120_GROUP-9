@@ -16,8 +16,24 @@ App
 │
 ├── Rooms
 │   ├── PageHeader
+│   ├── KPI Pill Filters
 │   ├── RoomFilter
-│   └── RoomCard
+│   ├── RoomCard (Grid View)
+│   ├── FloorPlanView (Spatial Matrix)
+│   ├── RoomTableView (Dense Table)
+│   ├── RoomDetailsModal
+│   └── RoomFormModal
+│
+├── Housekeeping
+│   ├── PageHeader
+│   ├── KPI Summary Cards
+│   ├── HousekeepingTaskCard (Kanban Board)
+│   ├── CleaningChecklistModal
+│   ├── AssignStaffModal
+│   ├── NewMaintenanceModal
+│   ├── Staff Roster & Workload
+│   ├── Maintenance & Damage Log
+│   └── Linen & Supplies Inventory
 │
 ├── Guests
 │   └── GuestTable
