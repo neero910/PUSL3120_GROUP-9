@@ -1,12 +1,37 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import PageHeader from '../components/layout/PageHeader'
 import GuestTable from '../components/guests/GuestTable'
-import { guests } from '../data/guests'
+import { guests as fallbackGuests } from '../data/guests'
+import { fetchApiData, normalizeGuest } from '../services/api'
 
 function Guests() {
+  const [guests, setGuests] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('All Status')
   const [selectedGuest, setSelectedGuest] = useState(null)
+
+  useEffect(() => {
+    let isMounted = true
+
+    fetchApiData('guests', fallbackGuests, normalizeGuest)
+      .then((data) => {
+        if (isMounted) {
+          setGuests(data)
+          setIsLoading(false)
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setGuests(fallbackGuests)
+          setIsLoading(false)
+        }
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   const filteredGuests = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase()
@@ -18,7 +43,7 @@ function Guests() {
 
       return matchesSearch && matchesStatus
     })
-  }, [searchTerm, statusFilter])
+  }, [guests, searchTerm, statusFilter])
 
   const guestCounts = {
     total: guests.length,
@@ -57,7 +82,11 @@ function Guests() {
         {(searchTerm || statusFilter !== 'All Status') && <button type="button" className="text-button" onClick={() => { setSearchTerm(''); setStatusFilter('All Status') }}>Clear filters</button>}
       </div>
 
-      <GuestTable guests={filteredGuests} onView={setSelectedGuest} />
+      {isLoading ? (
+        <div className="panel empty-state"><strong>Loading guests...</strong><span>Fetching the latest guest records.</span></div>
+      ) : (
+        <GuestTable guests={filteredGuests} onView={setSelectedGuest} />
+      )}
 
       {selectedGuest && (
         <aside className="profile-panel" aria-label="Selected guest profile">

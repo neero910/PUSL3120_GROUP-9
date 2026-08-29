@@ -1,12 +1,37 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import PageHeader from '../components/layout/PageHeader'
-import { users } from '../data/users'
+import { users as fallbackUsers } from '../data/users'
+import { fetchApiData, normalizeUser } from '../services/api'
 
 function Users() {
+  const [users, setUsers] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [roleFilter, setRoleFilter] = useState('All Roles')
   const [statusFilter, setStatusFilter] = useState('All Status')
   const [selectedUser, setSelectedUser] = useState(null)
+
+  useEffect(() => {
+    let isMounted = true
+
+    fetchApiData('users', fallbackUsers, normalizeUser)
+      .then((data) => {
+        if (isMounted) {
+          setUsers(data)
+          setIsLoading(false)
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setUsers(fallbackUsers)
+          setIsLoading(false)
+        }
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   const filteredUsers = useMemo(() => users.filter((user) => {
     const normalizedSearch = searchTerm.trim().toLowerCase()
@@ -15,7 +40,7 @@ function Users() {
     const matchesStatus = statusFilter === 'All Status' || user.status === statusFilter
 
     return matchesSearch && matchesRole && matchesStatus
-  }), [roleFilter, searchTerm, statusFilter])
+  }), [roleFilter, searchTerm, statusFilter, users])
 
   const activeUsers = users.filter((user) => user.status === 'Active').length
   const roles = [...new Set(users.map((user) => user.role))]
@@ -52,43 +77,47 @@ function Users() {
         {(searchTerm || roleFilter !== 'All Roles' || statusFilter !== 'All Status') && <button type="button" className="text-button" onClick={() => { setSearchTerm(''); setRoleFilter('All Roles'); setStatusFilter('All Status') }}>Clear filters</button>}
       </div>
 
-      <div className="panel">
-        <div className="panel-heading directory-heading">
-          <div><h3>Team accounts</h3><p className="muted-text">{filteredUsers.length} of {users.length} accounts shown</p></div>
-          <span className="muted-text">Last active</span>
-        </div>
-        <div className="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>User</th>
-                <th>Email</th>
-                <th>Role</th>
-                <th>Status</th>
-                <th>Last Active</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredUsers.map((user) => (
-                <tr key={user.id}>
-                  <td><div className="table-person"><div className="avatar small-avatar">{user.name.split(' ').map((part) => part[0]).join('').slice(0, 2)}</div><strong>{user.name}</strong></div></td>
-                  <td>{user.email}</td>
-                  <td>{user.role}</td>
-                  <td>
-                    <span className={`status-badge ${user.status.toLowerCase()}`}>{user.status}</span>
-                  </td>
-                  <td>{user.lastActive}</td>
-                  <td>
-                    <button type="button" className="secondary-button small-button" onClick={() => setSelectedUser(user)}>View details</button>
-                  </td>
+      {isLoading ? (
+        <div className="panel empty-state"><strong>Loading users...</strong><span>Fetching the latest access records.</span></div>
+      ) : (
+        <div className="panel">
+          <div className="panel-heading directory-heading">
+            <div><h3>Team accounts</h3><p className="muted-text">{filteredUsers.length} of {users.length} accounts shown</p></div>
+            <span className="muted-text">Last active</span>
+          </div>
+          <div className="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th>Status</th>
+                  <th>Last Active</th>
+                  <th>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-          {!filteredUsers.length && <div className="empty-state"><strong>No users found</strong><span>Try a different name, role or status.</span></div>}
+              </thead>
+              <tbody>
+                {filteredUsers.map((user) => (
+                  <tr key={user.id}>
+                    <td><div className="table-person"><div className="avatar small-avatar">{user.name.split(' ').map((part) => part[0]).join('').slice(0, 2)}</div><strong>{user.name}</strong></div></td>
+                    <td>{user.email}</td>
+                    <td>{user.role}</td>
+                    <td>
+                      <span className={`status-badge ${user.status.toLowerCase()}`}>{user.status}</span>
+                    </td>
+                    <td>{user.lastActive}</td>
+                    <td>
+                      <button type="button" className="secondary-button small-button" onClick={() => setSelectedUser(user)}>View details</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {!filteredUsers.length && <div className="empty-state"><strong>No users found</strong><span>Try a different name, role or status.</span></div>}
+          </div>
         </div>
-      </div>
+      )}
 
       {selectedUser && (
         <aside className="profile-panel" aria-label="Selected user details">
