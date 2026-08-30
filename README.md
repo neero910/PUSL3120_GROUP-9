@@ -2,7 +2,7 @@
 
 ## API configuration
 
-Set `VITE_API_BASE_URL` in `.env` to the backend API URL. The connected modules expect:
+The Restaurant, Payments, and Invoices pages use the backend configured by `VITE_API_BASE_URL`. Copy `.env.example` to `.env` and set the URL for the API server. The client expects these endpoints:
 
 - `GET /menu-items`
 - `POST /orders` with `{ room, note, items, total }`
@@ -10,7 +10,7 @@ Set `VITE_API_BASE_URL` in `.env` to the backend API URL. The connected modules 
 - `PATCH /payments/:id` with `{ status: "Paid" }`
 - `GET /invoices`
 
-List endpoints may return an array or `{ "data": [] }`.
+List endpoints may return either an array or an object with a `data` array. Records should use the existing page fields, including `id`, `amount`, and status fields.
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
