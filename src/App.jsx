@@ -1,5 +1,8 @@
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { AuthProvider } from './context/AuthContext'
+import ProtectedRoute from './components/ProtectedRoute'
 import MainLayout from './components/layout/MainLayout'
+import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Rooms from './pages/Rooms'
 import Housekeeping from './pages/Housekeeping'
@@ -33,23 +36,31 @@ function AppContent() {
     '/settings': 'Settings',
   }
 
+  // Check if we're on the login page
+  if (location.pathname === '/login') {
+    return <Routes>
+      <Route path="/login" element={<Login />} />
+    </Routes>
+  }
+
   return (
     <MainLayout title={titles[location.pathname] || 'Dashboard'}>
       <Routes>
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/rooms" element={<Rooms />} />
-        <Route path="/housekeeping" element={<Housekeeping />} />
-        <Route path="/guests" element={<Guests />} />
-        <Route path="/reservations" element={<Reservations />} />
-        <Route path="/check-in" element={<CheckIn />} />
-        <Route path="/check-out" element={<CheckOut />} />
-        <Route path="/restaurant" element={<Restaurant />} />
-        <Route path="/payments" element={<Payments />} />
-        <Route path="/invoices" element={<Invoices />} />
-        <Route path="/reports" element={<Reports />} />
-        <Route path="/users" element={<Users />} />
-        <Route path="/settings" element={<Dashboard />} />
+        <Route path="/login" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/rooms" element={<ProtectedRoute><Rooms /></ProtectedRoute>} />
+        <Route path="/housekeeping" element={<ProtectedRoute><Housekeeping /></ProtectedRoute>} />
+        <Route path="/guests" element={<ProtectedRoute><Guests /></ProtectedRoute>} />
+        <Route path="/reservations" element={<ProtectedRoute><Reservations /></ProtectedRoute>} />
+        <Route path="/check-in" element={<ProtectedRoute><CheckIn /></ProtectedRoute>} />
+        <Route path="/check-out" element={<ProtectedRoute><CheckOut /></ProtectedRoute>} />
+        <Route path="/restaurant" element={<ProtectedRoute><Restaurant /></ProtectedRoute>} />
+        <Route path="/payments" element={<ProtectedRoute><Payments /></ProtectedRoute>} />
+        <Route path="/invoices" element={<ProtectedRoute><Invoices /></ProtectedRoute>} />
+        <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
+        <Route path="/users" element={<ProtectedRoute><Users /></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       </Routes>
     </MainLayout>
   )
@@ -58,7 +69,9 @@ function AppContent() {
 function App() {
   return (
     <BrowserRouter>
-      <AppContent />
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </BrowserRouter>
   )
 }

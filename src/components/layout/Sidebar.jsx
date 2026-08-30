@@ -1,4 +1,5 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
+import { useAuth } from '../../context/AuthContext'
 
 const navSections = [
   {
@@ -52,6 +53,14 @@ const iconMap = {
 }
 
 function Sidebar() {
+  const navigate = useNavigate()
+  const { logout, user } = useAuth()
+
+  const handleLogout = async () => {
+    await logout()
+    navigate('/login')
+  }
+
   return (
     <aside className="sidebar">
       <div className="brand-block">
@@ -74,6 +83,18 @@ function Sidebar() {
           </NavLink>
         ))}
       </nav>
+
+      <div className="sidebar-footer">
+        {user && (
+          <div className="user-info">
+            <p className="user-name">{user.name}</p>
+            <p className="user-role">{user.role}</p>
+          </div>
+        )}
+        <button className="logout-button" onClick={handleLogout}>
+          🚪 Logout
+        </button>
+      </div>
     </aside>
   )
 }

@@ -59,6 +59,9 @@ button {
 
 .sidebar {
   padding: 20px 18px;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
 }
 
 .brand-block {
@@ -99,6 +102,7 @@ button {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  flex: 1;
 }
 
 .nav-item {
@@ -122,6 +126,51 @@ button {
   width: 18px;
   text-align: center;
   font-size: 0.95rem;
+}
+
+.sidebar-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 16px;
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.user-info {
+  padding: 0 12px;
+}
+
+.user-name {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: white;
+}
+
+.user-role {
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: #93c5fd;
+}
+
+.logout-button {
+  width: 100%;
+  padding: 10px 12px;
+  background: rgba(239, 68, 68, 0.1);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.logout-button:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fecaca;
+  border-color: rgba(239, 68, 68, 0.5);
 }
 
 .main-panel {
