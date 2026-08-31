@@ -13,6 +13,7 @@ import roomRoutes from './routes/roomRoutes.js';
 import guestRoutes from './routes/guestRoutes.js';
 import reservationRoutes from './routes/reservationRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
+import housekeepingRoutes from './routes/housekeepingRoutes.js';
 
 // Initialize Express app
 const app = express();
@@ -286,6 +287,7 @@ app.post('/api/check-out/process', (req, res) => {
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/rooms', roomRoutes);
+app.use('/api/housekeeping', housekeepingRoutes);
 app.use('/api/guests', guestRoutes);
 app.use('/api/reservations', reservationRoutes);
 app.use('/api/dashboard', dashboardRoutes);

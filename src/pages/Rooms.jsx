@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import PageHeader from '../components/layout/PageHeader'
 import RoomFilter from '../components/rooms/RoomFilter'
 import RoomCard from '../components/rooms/RoomCard'
@@ -13,10 +13,12 @@ import {
   housekeepingStatuses,
   roomFloors
 } from '../data/rooms'
+import { roomsApi } from '../services/api'
 
 function Rooms() {
   const [roomList, setRoomList] = useState(initialRooms)
   const [viewMode, setViewMode] = useState('grid') // 'grid' | 'floorplan' | 'table'
+  const [isLoading, setIsLoading] = useState(true)
 
   // Filter States
   const [searchTerm, setSearchTerm] = useState('')
@@ -36,41 +38,97 @@ function Rooms() {
     setTimeout(() => setToastMessage(null), 3500)
   }
 
-  // Quick Status change directly from card, table, or modal
-  const handleQuickStatusChange = (roomId, newStatus) => {
-    setRoomList(prev => prev.map(room => {
-      if (room.id === roomId) {
-        let newHkStatus = room.housekeepingStatus
-        if (newStatus === 'Cleaning') newHkStatus = 'In Progress'
-        if (newStatus === 'Available') newHkStatus = 'Clean & Ready'
-        if (newStatus === 'Maintenance') newHkStatus = 'Out of Order'
+  // Load rooms from API on mount
+  useEffect(() => {
+    let isMounted = true
+    setIsLoading(true)
 
+    roomsApi.getAll()
+      .then((res) => {
+        if (!isMounted) return
+        const data = res?.data || (Array.isArray(res) ? res : initialRooms)
+        if (Array.isArray(data) && data.length > 0) {
+          setRoomList(data)
+        }
+      })
+      .catch((err) => {
+        console.warn('Could not fetch rooms from API, using fallback:', err)
+      })
+      .finally(() => {
+        if (isMounted) setIsLoading(false)
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  // Quick Status change directly from card, table, or modal
+  const handleQuickStatusChange = async (roomId, newStatus) => {
+    let newHkStatus
+    if (newStatus === 'Cleaning') newHkStatus = 'In Progress'
+    else if (newStatus === 'Available') newHkStatus = 'Clean & Ready'
+    else if (newStatus === 'Maintenance') newHkStatus = 'Out of Order'
+
+    // Optimistic UI update
+    setRoomList(prev => prev.map(room => {
+      if (String(room.id) === String(roomId) || String(room.roomNumber) === String(roomId)) {
         const updated = {
           ...room,
           status: newStatus,
-          housekeepingStatus: newHkStatus
+          housekeepingStatus: newHkStatus || room.housekeepingStatus
         }
-
-        if (selectedRoomDetails && selectedRoomDetails.id === roomId) {
+        if (selectedRoomDetails && (String(selectedRoomDetails.id) === String(roomId) || String(selectedRoomDetails.roomNumber) === String(roomId))) {
           setSelectedRoomDetails(updated)
         }
-
         return updated
       }
       return room
     }))
 
-    showToast(`Room status updated to ${newStatus}`)
+    try {
+      const res = await roomsApi.updateStatus(roomId, newStatus, newHkStatus)
+      if (res?.data) {
+        setRoomList(prev => prev.map(r => (String(r.id) === String(res.data.id) ? res.data : r)))
+        if (selectedRoomDetails && String(selectedRoomDetails.id) === String(res.data.id)) {
+          setSelectedRoomDetails(res.data)
+        }
+      }
+      showToast(`Room status updated to ${newStatus}`)
+    } catch (error) {
+      console.warn('API updateStatus failed, relying on local update:', error)
+      showToast(`Room status updated to ${newStatus}`)
+    }
   }
 
   // Save new or edited room
-  const handleSaveRoom = (roomData, isEditing) => {
+  const handleSaveRoom = async (roomData, isEditing) => {
     if (isEditing) {
-      setRoomList(prev => prev.map(r => r.id === roomData.id ? roomData : r))
+      // Optimistic update
+      setRoomList(prev => prev.map(r => String(r.id) === String(roomData.id) ? roomData : r))
       showToast(`Room ${roomData.roomNumber} details updated successfully`)
+
+      try {
+        const res = await roomsApi.update(roomData.id, roomData)
+        if (res?.data) {
+          setRoomList(prev => prev.map(r => String(r.id) === String(res.data.id) ? res.data : r))
+        }
+      } catch (err) {
+        console.warn('API update failed, local state maintained:', err)
+      }
     } else {
+      // Optimistic add
       setRoomList(prev => [roomData, ...prev])
       showToast(`New Room ${roomData.roomNumber} created successfully`)
+
+      try {
+        const res = await roomsApi.create(roomData)
+        if (res?.data) {
+          setRoomList(prev => [res.data, ...prev.filter(r => String(r.id) !== String(roomData.id))])
+        }
+      } catch (err) {
+        console.warn('API create failed, local state maintained:', err)
+      }
     }
   }
 
@@ -224,7 +282,7 @@ function Rooms() {
             />
           ))}
 
-          {filteredRooms.length === 0 && (
+          {filteredRooms.length === 0 && !isLoading && (
             <div className="empty-state full-width">
               <strong>No rooms found matching your filters</strong>
               <span>Try clearing search term or status filters</span>

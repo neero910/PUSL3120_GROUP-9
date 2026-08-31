@@ -5,6 +5,13 @@
 
 import { guests as fallbackGuests } from '../data/guests.js'
 import { users as fallbackUsers } from '../data/users.js'
+import { rooms as fallbackRooms } from '../data/rooms.js'
+import {
+  initialHousekeepingTasks as fallbackTasks,
+  housekeepingStaff as fallbackStaff,
+  initialMaintenanceIssues as fallbackMaintenance,
+  initialInventorySupplies as fallbackInventory
+} from '../data/housekeeping.js'
 import {
   stats as fallbackStats,
   occupancyData as fallbackOccupancy,
@@ -128,8 +135,16 @@ export const authApi = {
  * Rooms API
  */
 export const roomsApi = {
-  async getAll() {
-    return apiCall('/rooms', { fallback: { success: true, data: fallbackGuests } })
+  async getAll(params = {}) {
+    const query = new URLSearchParams()
+    if (params.search) query.append('search', params.search)
+    if (params.type && params.type !== 'All') query.append('type', params.type)
+    if (params.status && params.status !== 'All') query.append('status', params.status)
+    if (params.housekeepingStatus && params.housekeepingStatus !== 'All') query.append('housekeepingStatus', params.housekeepingStatus)
+    if (params.floor && params.floor !== 'All' && params.floor !== 'All Floors') query.append('floor', params.floor)
+
+    const qs = query.toString() ? `?${query.toString()}` : ''
+    return apiCall(`/rooms${qs}`, { fallback: { success: true, count: fallbackRooms.length, data: fallbackRooms } })
   },
 
   async getById(id) {
@@ -150,6 +165,13 @@ export const roomsApi = {
     })
   },
 
+  async updateStatus(id, status, housekeepingStatus) {
+    return apiCall(`/rooms/${id}/status`, {
+      method: 'PATCH',
+      body: { status, housekeepingStatus },
+    })
+  },
+
   async delete(id) {
     return apiCall(`/rooms/${id}`, {
       method: 'DELETE',
@@ -158,6 +180,186 @@ export const roomsApi = {
 
   async getStats() {
     return apiCall('/rooms/stats/summary')
+  },
+}
+
+/**
+ * Housekeeping API
+ */
+export const housekeepingApi = {
+  // Tasks
+  async getTasks(params = {}) {
+    const query = new URLSearchParams()
+    if (params.search) query.append('search', params.search)
+    if (params.stage && params.stage !== 'All') query.append('stage', params.stage)
+    if (params.floor && params.floor !== 'All') query.append('floor', params.floor)
+    if (params.priority && params.priority !== 'All') query.append('priority', params.priority)
+    if (params.assignedTo && params.assignedTo !== 'All') query.append('assignedTo', params.assignedTo)
+
+    const qs = query.toString() ? `?${query.toString()}` : ''
+    return apiCall(`/housekeeping/tasks${qs}`, { fallback: { success: true, count: fallbackTasks.length, data: fallbackTasks } })
+  },
+
+  async getTaskById(id) {
+    return apiCall(`/housekeeping/tasks/${id}`)
+  },
+
+  async createTask(taskData) {
+    return apiCall('/housekeeping/tasks', {
+      method: 'POST',
+      body: taskData,
+    })
+  },
+
+  async updateTask(id, taskData) {
+    return apiCall(`/housekeeping/tasks/${id}`, {
+      method: 'PUT',
+      body: taskData,
+    })
+  },
+
+  async updateTaskStage(id, stage) {
+    return apiCall(`/housekeeping/tasks/${id}/stage`, {
+      method: 'PATCH',
+      body: { stage },
+    })
+  },
+
+  async updateTaskChecklist(id, checklist, notes, isCleanAndReady = false) {
+    return apiCall(`/housekeeping/tasks/${id}/checklist`, {
+      method: 'PATCH',
+      body: { checklist, notes, isCleanAndReady },
+    })
+  },
+
+  async assignStaff(id, assignedTo, priority, dueTime) {
+    return apiCall(`/housekeeping/tasks/${id}/assign`, {
+      method: 'PATCH',
+      body: { assignedTo, priority, dueTime },
+    })
+  },
+
+  async deleteTask(id) {
+    return apiCall(`/housekeeping/tasks/${id}`, {
+      method: 'DELETE',
+    })
+  },
+
+  async getStats() {
+    return apiCall('/housekeeping/stats/summary')
+  },
+
+  // Staff
+  async getStaff() {
+    return apiCall('/housekeeping/staff', { fallback: { success: true, count: fallbackStaff.length, data: fallbackStaff } })
+  },
+
+  async getStaffById(id) {
+    return apiCall(`/housekeeping/staff/${id}`)
+  },
+
+  async createStaff(staffData) {
+    return apiCall('/housekeeping/staff', {
+      method: 'POST',
+      body: staffData,
+    })
+  },
+
+  async updateStaff(id, staffData) {
+    return apiCall(`/housekeeping/staff/${id}`, {
+      method: 'PUT',
+      body: staffData,
+    })
+  },
+
+  async deleteStaff(id) {
+    return apiCall(`/housekeeping/staff/${id}`, {
+      method: 'DELETE',
+    })
+  },
+
+  // Maintenance
+  async getMaintenance(params = {}) {
+    const query = new URLSearchParams()
+    if (params.search) query.append('search', params.search)
+    if (params.status && params.status !== 'All') query.append('status', params.status)
+    if (params.severity && params.severity !== 'All') query.append('severity', params.severity)
+    if (params.roomNumber && params.roomNumber !== 'All') query.append('roomNumber', params.roomNumber)
+
+    const qs = query.toString() ? `?${query.toString()}` : ''
+    return apiCall(`/housekeeping/maintenance${qs}`, { fallback: { success: true, count: fallbackMaintenance.length, data: fallbackMaintenance } })
+  },
+
+  async getMaintenanceById(id) {
+    return apiCall(`/housekeeping/maintenance/${id}`)
+  },
+
+  async createMaintenance(issueData) {
+    return apiCall('/housekeeping/maintenance', {
+      method: 'POST',
+      body: issueData,
+    })
+  },
+
+  async updateMaintenance(id, issueData) {
+    return apiCall(`/housekeeping/maintenance/${id}`, {
+      method: 'PUT',
+      body: issueData,
+    })
+  },
+
+  async resolveMaintenance(id) {
+    return apiCall(`/housekeeping/maintenance/${id}/resolve`, {
+      method: 'PATCH',
+    })
+  },
+
+  async deleteMaintenance(id) {
+    return apiCall(`/housekeeping/maintenance/${id}`, {
+      method: 'DELETE',
+    })
+  },
+
+  // Inventory
+  async getInventory(params = {}) {
+    const query = new URLSearchParams()
+    if (params.search) query.append('search', params.search)
+    if (params.category && params.category !== 'All') query.append('category', params.category)
+    if (params.status && params.status !== 'All') query.append('status', params.status)
+
+    const qs = query.toString() ? `?${query.toString()}` : ''
+    return apiCall(`/housekeeping/inventory${qs}`, { fallback: { success: true, count: fallbackInventory.length, data: fallbackInventory } })
+  },
+
+  async getInventoryById(id) {
+    return apiCall(`/housekeeping/inventory/${id}`)
+  },
+
+  async createInventory(itemData) {
+    return apiCall('/housekeeping/inventory', {
+      method: 'POST',
+      body: itemData,
+    })
+  },
+
+  async updateInventory(id, itemData) {
+    return apiCall(`/housekeeping/inventory/${id}`, {
+      method: 'PUT',
+      body: itemData,
+    })
+  },
+
+  async restockInventory(id, quantity) {
+    return apiCall(`/housekeeping/inventory/${id}/restock`, {
+      method: 'POST',
+      body: { quantity },
+    })
+  },
+
+  async deleteInventory(id) {
+    return apiCall(`/housekeeping/inventory/${id}`, {
+      method: 'DELETE',
+    })
   },
 }
 
@@ -321,6 +523,10 @@ export function resolveApiData(endpoint, fallbackData) {
     return fallbackData
   }
 
+  if (endpoint === 'rooms') {
+    return fallbackRooms
+  }
+
   if (endpoint === 'guests') {
     return fallbackGuests
   }
@@ -331,6 +537,22 @@ export function resolveApiData(endpoint, fallbackData) {
 
   if (endpoint === 'dashboard') {
     return normalizeDashboard()
+  }
+
+  if (endpoint === 'housekeeping/tasks') {
+    return fallbackTasks
+  }
+
+  if (endpoint === 'housekeeping/staff') {
+    return fallbackStaff
+  }
+
+  if (endpoint === 'housekeeping/maintenance') {
+    return fallbackMaintenance
+  }
+
+  if (endpoint === 'housekeeping/inventory') {
+    return fallbackInventory
   }
 
   return []

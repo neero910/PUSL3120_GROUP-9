@@ -8,21 +8,33 @@ import {
   getRoomById,
   createRoom,
   updateRoomData,
+  updateRoomStatus,
   deleteRoomData,
   getRoomStats
 } from '../controllers/roomController.js';
-import { authenticate, authorizeRoles } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-// Public route
-router.get('/', getAllRooms);
+// Summary statistics
 router.get('/stats/summary', getRoomStats);
+
+// List all rooms & filter
+router.get('/', getAllRooms);
+
+// Single room details
 router.get('/:id', getRoomById);
 
-// Protected routes - only Administrator and Manager can create/update/delete
-router.post('/', authenticate, authorizeRoles('Administrator', 'Manager'), createRoom);
-router.put('/:id', authenticate, authorizeRoles('Administrator', 'Manager'), updateRoomData);
-router.delete('/:id', authenticate, authorizeRoles('Administrator', 'Manager'), deleteRoomData);
+// Create room
+router.post('/', createRoom);
+
+// Full or partial room update
+router.put('/:id', updateRoomData);
+router.patch('/:id', updateRoomData);
+
+// Quick status change
+router.patch('/:id/status', updateRoomStatus);
+
+// Delete room
+router.delete('/:id', deleteRoomData);
 
 export default router;

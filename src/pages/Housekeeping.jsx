@@ -1,23 +1,25 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import PageHeader from '../components/layout/PageHeader'
 import HousekeepingTaskCard from '../components/housekeeping/HousekeepingTaskCard'
 import CleaningChecklistModal from '../components/housekeeping/CleaningChecklistModal'
 import AssignStaffModal from '../components/housekeeping/AssignStaffModal'
 import NewMaintenanceModal from '../components/housekeeping/NewMaintenanceModal'
 import {
-  housekeepingStaff,
+  housekeepingStaff as initialStaff,
   initialHousekeepingTasks,
   initialMaintenanceIssues,
   initialInventorySupplies,
   housekeepingStages
 } from '../data/housekeeping'
+import { housekeepingApi } from '../services/api'
 
 function Housekeeping() {
   const [activeTab, setActiveTab] = useState('board') // 'board' | 'staff' | 'maintenance' | 'inventory'
   const [tasks, setTasks] = useState(initialHousekeepingTasks)
-  const [staff, setStaff] = useState(housekeepingStaff)
+  const [staff, setStaff] = useState(initialStaff)
   const [maintenanceIssues, setMaintenanceIssues] = useState(initialMaintenanceIssues)
   const [inventory, setInventory] = useState(initialInventorySupplies)
+  const [isLoading, setIsLoading] = useState(true)
 
   // Filters for the task board
   const [searchTerm, setSearchTerm] = useState('')
@@ -38,8 +40,43 @@ function Housekeeping() {
     }, 3500)
   }
 
+  // Load housekeeping data from API on mount
+  useEffect(() => {
+    let isMounted = true
+    setIsLoading(true)
+
+    Promise.allSettled([
+      housekeepingApi.getTasks(),
+      housekeepingApi.getStaff(),
+      housekeepingApi.getMaintenance(),
+      housekeepingApi.getInventory(),
+    ]).then(([tasksRes, staffRes, mntRes, invRes]) => {
+      if (!isMounted) return
+
+      if (tasksRes.status === 'fulfilled' && tasksRes.value?.data) {
+        setTasks(tasksRes.value.data)
+      }
+      if (staffRes.status === 'fulfilled' && staffRes.value?.data) {
+        setStaff(staffRes.value.data)
+      }
+      if (mntRes.status === 'fulfilled' && mntRes.value?.data) {
+        setMaintenanceIssues(mntRes.value.data)
+      }
+      if (invRes.status === 'fulfilled' && invRes.value?.data) {
+        setInventory(invRes.value.data)
+      }
+    }).finally(() => {
+      if (isMounted) setIsLoading(false)
+    })
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
   // Handle stage moves
-  const handleMoveStage = (taskId, newStage) => {
+  const handleMoveStage = async (taskId, newStage) => {
+    // Optimistic UI update
     setTasks(prev => prev.map(t => {
       if (t.id === taskId) {
         return {
@@ -51,10 +88,20 @@ function Housekeeping() {
       return t
     }))
     showToast(`Task ${taskId} moved to ${newStage}`)
+
+    try {
+      const res = await housekeepingApi.updateTaskStage(taskId, newStage)
+      if (res?.data) {
+        setTasks(prev => prev.map(t => (t.id === res.data.id ? res.data : t)))
+      }
+    } catch (err) {
+      console.warn('API updateTaskStage error, maintaining local state:', err)
+    }
   }
 
   // Handle checklist update
-  const handleSaveChecklist = (taskId, updatedChecklist, notes) => {
+  const handleSaveChecklist = async (taskId, updatedChecklist, notes) => {
+    // Optimistic UI update
     setTasks(prev => prev.map(t => {
       if (t.id === taskId) {
         return { ...t, checklist: updatedChecklist, notes }
@@ -62,10 +109,20 @@ function Housekeeping() {
       return t
     }))
     showToast(`Checklist for task updated`)
+
+    try {
+      const res = await housekeepingApi.updateTaskChecklist(taskId, updatedChecklist, notes, false)
+      if (res?.data) {
+        setTasks(prev => prev.map(t => (t.id === res.data.id ? res.data : t)))
+      }
+    } catch (err) {
+      console.warn('API updateTaskChecklist error, maintaining local state:', err)
+    }
   }
 
   // Handle mark clean & ready
-  const handleMarkCleanAndReady = (taskId, updatedChecklist, notes) => {
+  const handleMarkCleanAndReady = async (taskId, updatedChecklist, notes) => {
+    // Optimistic UI update
     setTasks(prev => prev.map(t => {
       if (t.id === taskId) {
         return {
@@ -78,10 +135,23 @@ function Housekeeping() {
       return t
     }))
     showToast(`Room certified Clean & Ready!`)
+
+    try {
+      const res = await housekeepingApi.updateTaskChecklist(taskId, updatedChecklist, notes, true)
+      if (res?.data) {
+        setTasks(prev => prev.map(t => (t.id === res.data.id ? res.data : t)))
+      }
+    } catch (err) {
+      console.warn('API markCleanAndReady error, maintaining local state:', err)
+    }
   }
 
   // Handle staff assignment
-  const handleAssignStaff = (taskIdOrRoom, assignmentDetails) => {
+  const handleAssignStaff = async (taskIdOrRoom, assignmentDetails) => {
+    const target = tasks.find(t => t.id === taskIdOrRoom || t.roomNumber === taskIdOrRoom)
+    const targetId = target ? target.id : taskIdOrRoom
+
+    // Optimistic UI update
     setTasks(prev => prev.map(t => {
       if (t.id === taskIdOrRoom || t.roomNumber === taskIdOrRoom) {
         return {
@@ -94,16 +164,41 @@ function Housekeeping() {
       return t
     }))
     showToast(`Attendant ${assignmentDetails.assignedTo} assigned to Room ${taskIdOrRoom}`)
+
+    try {
+      const res = await housekeepingApi.assignStaff(
+        targetId,
+        assignmentDetails.assignedTo,
+        assignmentDetails.priority,
+        assignmentDetails.dueTime
+      )
+      if (res?.data) {
+        setTasks(prev => prev.map(t => (t.id === res.data.id ? res.data : t)))
+      }
+    } catch (err) {
+      console.warn('API assignStaff error, maintaining local state:', err)
+    }
   }
 
   // Handle maintenance issue submission
-  const handleAddMaintenance = (newIssue) => {
+  const handleAddMaintenance = async (newIssue) => {
+    // Optimistic UI update
     setMaintenanceIssues(prev => [newIssue, ...prev])
     showToast(`Maintenance ticket ${newIssue.id} logged for Room ${newIssue.roomNumber}`)
+
+    try {
+      const res = await housekeepingApi.createMaintenance(newIssue)
+      if (res?.data) {
+        setMaintenanceIssues(prev => [res.data, ...prev.filter(i => i.id !== newIssue.id)])
+      }
+    } catch (err) {
+      console.warn('API createMaintenance error, maintaining local state:', err)
+    }
   }
 
   // Handle maintenance resolve
-  const handleResolveIssue = (issueId) => {
+  const handleResolveIssue = async (issueId) => {
+    // Optimistic UI update
     setMaintenanceIssues(prev => prev.map(item => {
       if (item.id === issueId) {
         return { ...item, status: 'Resolved' }
@@ -111,32 +206,53 @@ function Housekeeping() {
       return item
     }))
     showToast(`Issue ${issueId} marked as Resolved`)
+
+    try {
+      const res = await housekeepingApi.resolveMaintenance(issueId)
+      if (res?.data) {
+        setMaintenanceIssues(prev => prev.map(item => (item.id === res.data.id ? res.data : item)))
+      }
+    } catch (err) {
+      console.warn('API resolveMaintenance error, maintaining local state:', err)
+    }
   }
 
   // Handle inventory restock
-  const handleRestockItem = (itemId) => {
-    setInventory(prev => prev.map(item => {
-      if (item.id === itemId) {
-        const added = item.category === 'Linen' || item.category === 'Towels' ? 20 : 30
+  const handleRestockItem = async (itemId) => {
+    const item = inventory.find(i => i.id === itemId)
+    const added = item?.category === 'Linen' || item?.category === 'Towels' ? 20 : 30
+
+    // Optimistic UI update
+    setInventory(prev => prev.map(i => {
+      if (i.id === itemId) {
         return {
-          ...item,
-          inStock: item.inStock + added,
+          ...i,
+          inStock: i.inStock + added,
           status: 'In Stock'
         }
       }
-      return item
+      return i
     }))
     showToast(`Restocked supply item successfully`)
+
+    try {
+      const res = await housekeepingApi.restockInventory(itemId, added)
+      if (res?.data) {
+        setInventory(prev => prev.map(i => (i.id === res.data.id ? res.data : i)))
+      }
+    } catch (err) {
+      console.warn('API restockInventory error, maintaining local state:', err)
+    }
   }
 
   // Quick action: Add new task
-  const handleQuickAddTask = () => {
+  const handleQuickAddTask = async () => {
     const randomRoom = `${Math.floor(Math.random() * 4 + 1)}0${Math.floor(Math.random() * 6 + 1)}`
     const newTask = {
       id: `HK-${Math.floor(100 + Math.random() * 900)}`,
       roomNumber: randomRoom,
       roomType: 'Standard',
-      floor: parseInt(randomRoom[0]),
+      floor: parseInt(randomRoom[0], 10),
       taskType: 'Daily Turnover',
       priority: 'Normal',
       stage: 'Dirty / Needs Clean',
@@ -152,8 +268,19 @@ function Housekeeping() {
       ],
       notes: 'Standard daily cleaning requested.'
     }
+
+    // Optimistic UI update
     setTasks(prev => [newTask, ...prev])
     showToast(`New cleaning task created for Room ${randomRoom}`)
+
+    try {
+      const res = await housekeepingApi.createTask(newTask)
+      if (res?.data) {
+        setTasks(prev => [res.data, ...prev.filter(t => t.id !== newTask.id)])
+      }
+    } catch (err) {
+      console.warn('API createTask error, maintaining local state:', err)
+    }
   }
 
   // KPI Calculations

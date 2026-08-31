@@ -251,6 +251,33 @@ Authorization: Bearer <token>
 }
 ```
 
+### Quick Room Status Change
+**PATCH** `/rooms/:id/status`
+
+**Authentication:** Not required
+
+**Request Body:**
+```json
+{
+  "status": "Cleaning",
+  "housekeepingStatus": "In Progress"
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Room status updated to Cleaning",
+  "data": {
+    "id": "104",
+    "roomNumber": "104",
+    "status": "Cleaning",
+    "housekeepingStatus": "In Progress"
+  }
+}
+```
+
 ### Get Room Statistics
 **GET** `/rooms/stats/summary`
 
@@ -261,12 +288,361 @@ Authorization: Bearer <token>
 {
   "success": true,
   "data": {
-    "totalRooms": 30,
-    "availableRooms": 12,
-    "occupiedRooms": 15,
+    "totalRooms": 16,
+    "availableRooms": 5,
+    "occupiedRooms": 6,
     "reservedRooms": 2,
+    "cleaningRooms": 2,
     "maintenanceRooms": 1,
-    "occupancyRate": "50.00"
+    "occupancyRate": "37.50%"
+  }
+}
+```
+
+---
+
+## Housekeeping Management
+
+### Housekeeping Summary Statistics
+**GET** `/housekeeping/stats/summary`
+
+**Authentication:** Not required
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "totalTasks": 7,
+    "cleanCount": 1,
+    "inProgressCount": 2,
+    "dirtyCount": 2,
+    "inspectionCount": 1,
+    "oooCount": 1,
+    "openMaintenanceCount": 2,
+    "guestReadyPercentage": 14
+  }
+}
+```
+
+### Tasks Management
+
+#### Get All Cleaning Tasks
+**GET** `/housekeeping/tasks`
+
+**Query Parameters:**
+- `search`: Filter by room number, attendant, or task notes
+- `stage`: Filter by stage (`Dirty / Needs Clean`, `In Progress`, `Inspection Required`, `Clean & Ready`, `Out of Order`)
+- `floor`: Filter by floor (`1`, `2`, `3`, `4`)
+- `priority`: Filter by priority (`Normal`, `High`, `Urgent`)
+- `assignedTo`: Filter by assigned staff member
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "count": 7,
+  "data": [
+    {
+      "id": "HK-101",
+      "roomNumber": "104",
+      "roomType": "Deluxe",
+      "floor": 1,
+      "taskType": "Checkout Turnover",
+      "priority": "High",
+      "stage": "In Progress",
+      "assignedTo": "Kamani Silva",
+      "dueTime": "13:30",
+      "startedAt": "12:15",
+      "checklist": [
+        { "id": "c1", "label": "Strip and replace bed linen & pillowcases", "completed": true },
+        { "id": "c2", "label": "Sanitize and polish bathroom surfaces & mirrors", "completed": true }
+      ],
+      "notes": "New guest arriving at 14:00. Fast turnaround required."
+    }
+  ]
+}
+```
+
+#### Get Task by ID
+**GET** `/housekeeping/tasks/:id`
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": { "id": "HK-101", "roomNumber": "104", "stage": "In Progress" }
+}
+```
+
+#### Create Cleaning Task
+**POST** `/housekeeping/tasks`
+
+**Request Body:**
+```json
+{
+  "roomNumber": "106",
+  "taskType": "Routine Clean",
+  "priority": "Normal",
+  "stage": "Dirty / Needs Clean",
+  "assignedTo": "Kamani Silva",
+  "dueTime": "15:00",
+  "notes": "Routine stayover clean"
+}
+```
+
+**Response (201 Created):**
+```json
+{
+  "success": true,
+  "message": "Cleaning task created for Room 106",
+  "data": { ... }
+}
+```
+
+#### Update Task Stage (Kanban Move)
+**PATCH** `/housekeeping/tasks/:id/stage`
+
+**Request Body:**
+```json
+{
+  "stage": "In Progress"
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Task HK-101 moved to In Progress",
+  "data": { ... }
+}
+```
+
+#### Update Task Checklist & Certification
+**PATCH** `/housekeeping/tasks/:id/checklist`
+
+**Request Body:**
+```json
+{
+  "checklist": [
+    { "id": "c1", "label": "Strip and replace bed linen", "completed": true }
+  ],
+  "notes": "All items verified by supervisor",
+  "isCleanAndReady": true
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Room 104 certified Clean & Ready!",
+  "data": { ... }
+}
+```
+
+#### Assign Staff Attendant
+**PATCH** `/housekeeping/tasks/:id/assign`
+
+**Request Body:**
+```json
+{
+  "assignedTo": "Roshan Bandara",
+  "priority": "High",
+  "dueTime": "16:00"
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Attendant Roshan Bandara assigned to Room 104",
+  "data": { ... }
+}
+```
+
+#### Delete Cleaning Task
+**DELETE** `/housekeeping/tasks/:id`
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Task deleted successfully"
+}
+```
+
+---
+
+### Staff Roster Management
+
+#### Get All Housekeeping Staff
+**GET** `/housekeeping/staff`
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "count": 4,
+  "data": [
+    {
+      "id": "1",
+      "name": "Kamani Silva",
+      "role": "Senior Housekeeper",
+      "shift": "Morning (07:00 - 15:30)",
+      "floor": "Floor 1 & 2",
+      "status": "On Duty",
+      "assignedRooms": ["101", "104", "202", "301"],
+      "completedToday": 5,
+      "avatar": "KS",
+      "phone": "+94 77 234 5671"
+    }
+  ]
+}
+```
+
+#### Create Staff Member
+**POST** `/housekeeping/staff`
+
+**Request Body:**
+```json
+{
+  "name": "Anoma Wickrama",
+  "role": "Housekeeping Attendant",
+  "shift": "Morning (07:00 - 15:30)",
+  "floor": "Floor 1 & 2",
+  "phone": "+94 77 111 2233"
+}
+```
+
+**Response (201 Created):**
+```json
+{
+  "success": true,
+  "message": "Staff member added successfully",
+  "data": { ... }
+}
+```
+
+---
+
+### Maintenance & Damage Log
+
+#### Get All Maintenance Tickets
+**GET** `/housekeeping/maintenance`
+
+**Query Parameters:**
+- `status`: `Open`, `In Progress`, `Pending Parts`, `Resolved`
+- `severity`: `Low`, `Normal`, `High`, `Urgent`
+- `roomNumber`: Filter by room number
+- `search`: Keyword search
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "count": 3,
+  "data": [
+    {
+      "id": "MNT-401",
+      "roomNumber": "105",
+      "category": "HVAC / Air Conditioning",
+      "title": "AC unit blowing lukewarm air",
+      "severity": "High",
+      "reportedBy": "Kamani Silva (Housekeeping)",
+      "reportedAt": "Today, 08:30 AM",
+      "assignedTechnician": "Nuwan Kumara (Engineering)",
+      "status": "In Progress",
+      "notes": "Compressor valve needs replacement."
+    }
+  ]
+}
+```
+
+#### Log Repair Ticket
+**POST** `/housekeeping/maintenance`
+
+**Request Body:**
+```json
+{
+  "roomNumber": "202",
+  "category": "Electrical & Lighting",
+  "title": "Balcony ambient spotlight flickering",
+  "severity": "Low",
+  "reportedBy": "Roshan Bandara",
+  "assignedTechnician": "Nuwan Kumara",
+  "notes": "Connector loose"
+}
+```
+
+**Response (201 Created):**
+```json
+{
+  "success": true,
+  "message": "Maintenance ticket MNT-404 logged for Room 202",
+  "data": { ... }
+}
+```
+
+#### Resolve Repair Ticket
+**PATCH** `/housekeeping/maintenance/:id/resolve`
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Maintenance issue MNT-401 marked as Resolved",
+  "data": { ... }
+}
+```
+
+---
+
+### Linen & Supply Inventory
+
+#### Get All Supplies
+**GET** `/housekeeping/inventory`
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "count": 10,
+  "data": [
+    {
+      "id": "INV-01",
+      "item": "Egyptian Cotton Bed Sheets (King)",
+      "category": "Linen",
+      "inStock": 64,
+      "minRequired": 40,
+      "unit": "Sets",
+      "status": "In Stock"
+    }
+  ]
+}
+```
+
+#### Restock Supply Item
+**POST** `/housekeeping/inventory/:id/restock`
+
+**Request Body:**
+```json
+{
+  "quantity": 20
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Restocked Egyptian Cotton Bed Sheets (King) successfully",
+  "data": {
+    "id": "INV-01",
+    "inStock": 84,
+    "status": "In Stock"
   }
 }
 ```
