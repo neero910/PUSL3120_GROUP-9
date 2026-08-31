@@ -1,0 +1,731 @@
+{
+  "info": {
+    "_postman_id": "syncboard-api-collection",
+    "name": "SyncBoard API",
+    "description": "Hotel management backend endpoints for SyncBoard",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@hotel.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"New User\",\n  \"email\": \"newuser@email.com\",\n  \"password\": \"password123\",\n  \"role\": \"Receptionist\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Verify Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/verify",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "verify"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "me"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "Summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard/summary",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "dashboard", "summary"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Occupancy",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard/occupancy",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "dashboard", "occupancy"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Revenue",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard/revenue",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "dashboard", "revenue"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Rooms",
+      "item": [
+        {
+          "name": "Get All Rooms",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/rooms",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "rooms"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Room Stats",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/rooms/stats/summary",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "rooms", "stats", "summary"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Room By Id",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/rooms/101",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "rooms", "101"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Room",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roomNumber\": \"205\",\n  \"type\": \"Deluxe\",\n  \"price\": 18000,\n  \"status\": \"Available\",\n  \"floor\": 2,\n  \"capacity\": 2\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/rooms",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "rooms"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Room",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Occupied\",\n  \"price\": 20000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/rooms/205",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "rooms", "205"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Room",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/rooms/205",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "rooms", "205"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Guests",
+      "item": [
+        {
+          "name": "Get All Guests",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/guests",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "guests"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Guest Stats",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/guests/stats/summary",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "guests", "stats", "summary"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Guest By Id",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/guests/G001",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "guests", "G001"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Guest",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Aisha Rahman\",\n  \"email\": \"aisha@email.com\",\n  \"phone\": \"0771234567\",\n  \"country\": \"Sri Lanka\",\n  \"status\": \"Checked In\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/guests",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "guests"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Guest",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Checked Out\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/guests/G001",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "guests", "G001"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Guest",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/guests/G001",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "guests", "G001"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Reservations",
+      "item": [
+        {
+          "name": "Get All Reservations",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/reservations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reservations"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Reservation Stats",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/reservations/stats/summary",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reservations", "stats", "summary"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Reservation By Id",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/reservations/RES001",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reservations", "RES001"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Reservations By Guest",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/reservations/guest/G001",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reservations", "guest", "G001"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Reservation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"guestId\": \"G001\",\n  \"roomId\": \"103\",\n  \"checkInDate\": \"2026-09-01\",\n  \"checkOutDate\": \"2026-09-04\",\n  \"status\": \"Confirmed\",\n  \"totalAmount\": 45000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/reservations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reservations"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Reservation",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Checked In\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/reservations/RES001",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reservations", "RES001"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Reservation",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservations/RES001",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reservations", "RES001"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Check In",
+      "item": [
+        {
+          "name": "Search Reservation",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/check-in/search?query=RES001",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "check-in", "search"],
+              "query": [
+                { "key": "query", "value": "RES001" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reservation Details",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/check-in/reservation/RES001",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "check-in", "reservation", "RES001"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Confirm Check In",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reservationId\": \"RES001\",\n  \"guestId\": \"G001\",\n  \"roomId\": \"103\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/check-in/confirm",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "check-in", "confirm"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Check Out",
+      "item": [
+        {
+          "name": "Search Guest",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/check-out/search?query=G001",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "check-out", "search"],
+              "query": [
+                { "key": "query", "value": "G001" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Guest Details",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/check-out/guest/G001",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "check-out", "guest", "G001"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Process Check Out",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"guestId\": \"G001\",\n  \"reservationId\": \"RES001\",\n  \"totalAmount\": 45000,\n  \"paymentMethod\": \"Card\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/check-out/process",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "check-out", "process"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Restaurant",
+      "item": [
+        {
+          "name": "Menu Items",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/menu-items",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "menu-items"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Place Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"room\": \"103\",\n  \"note\": \"Extra napkins\",\n  \"items\": [\n    { \"id\": \"MI-201\", \"name\": \"Grilled Chicken Bowl\", \"quantity\": 1, \"price\": 2600 }\n  ],\n  \"total\": 2600\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "Get Payments",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/payments",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payments"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Payment",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Paid\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/PAY-9013",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payments", "PAY-9013"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Invoices",
+      "item": [
+        {
+          "name": "Get Invoices",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/invoices",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "invoices"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "API Health",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "health"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
