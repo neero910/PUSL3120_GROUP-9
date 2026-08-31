@@ -10,7 +10,11 @@ import {
   findReservationsByGuestId,
   findConflictingReservations,
   updateReservation, 
-  deleteReservation 
+  deleteReservation,
+  filterReservationsByStatus,
+  filterReservationsByDateRange,
+  searchReservations,
+  getReservationsWithFilters
 } from '../data/reservations.js';
 import { findGuestById } from '../data/guests.js';
 import { findRoomById } from '../data/rooms.js';
@@ -275,6 +279,213 @@ export function getReservationStats(req, res, next) {
         completedReservations,
         cancelledReservations,
         totalRevenue
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Filter reservations by status
+ * GET /api/reservations/filter/status?status=Confirmed
+ */
+export function filterByStatus(req, res, next) {
+  try {
+    const { status } = req.query;
+
+    if (!status) {
+      return res.status(400).json({
+        success: false,
+        message: 'Status parameter is required'
+      });
+    }
+
+    const filteredReservations = filterReservationsByStatus(status);
+
+    res.json({
+      success: true,
+      data: filteredReservations,
+      count: filteredReservations.length
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Filter reservations by date range
+ * GET /api/reservations/filter/date-range?startDate=2026-09-01&endDate=2026-09-30
+ */
+export function filterByDateRange(req, res, next) {
+  try {
+    const { startDate, endDate } = req.query;
+
+    if (!startDate || !endDate) {
+      return res.status(400).json({
+        success: false,
+        message: 'Start date and end date are required'
+      });
+    }
+
+    // Validate date format
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid date format. Use YYYY-MM-DD'
+      });
+    }
+
+    if (end < start) {
+      return res.status(400).json({
+        success: false,
+        message: 'End date must be after start date'
+      });
+    }
+
+    const filteredReservations = filterReservationsByDateRange(startDate, endDate);
+
+    res.json({
+      success: true,
+      data: filteredReservations,
+      count: filteredReservations.length,
+      dateRange: { startDate, endDate }
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Search reservations by query and filters
+ * GET /api/reservations/search?query=RES001&status=Confirmed&startDate=2026-09-01&endDate=2026-09-30
+ */
+export function searchReservationsHandler(req, res, next) {
+  try {
+    const { query, status, startDate, endDate } = req.query;
+
+    const filters = {};
+    if (status) filters.status = status;
+    if (startDate) filters.startDate = startDate;
+    if (endDate) filters.endDate = endDate;
+
+    const results = searchReservations(query, filters);
+
+    res.json({
+      success: true,
+      data: results,
+      count: results.length,
+      query,
+      appliedFilters: Object.keys(filters).length > 0 ? filters : null
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Get reservations with advanced filtering and pagination
+ * GET /api/reservations/filtered?status=Confirmed&page=1&limit=10&sortBy=createdAt&sortOrder=desc
+ */
+export function getFilteredReservations(req, res, next) {
+  try {
+    const {
+      status,
+      startDate,
+      endDate,
+      page = 1,
+      limit = 10,
+      sortBy = 'createdAt',
+      sortOrder = 'desc'
+    } = req.query;
+
+    const options = {
+      status,
+      startDate,
+      endDate,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      sortBy,
+      sortOrder
+    };
+
+    const result = getReservationsWithFilters(options);
+
+    res.json({
+      success: true,
+      ...result
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Get reservation statistics by status
+ * GET /api/reservations/stats/by-status
+ */
+export function getReservationStatsByStatus(req, res, next) {
+  try {
+    const stats = {
+      confirmed: filterReservationsByStatus('Confirmed').length,
+      pending: filterReservationsByStatus('Pending').length,
+      completed: filterReservationsByStatus('Completed').length,
+      cancelled: filterReservationsByStatus('Cancelled').length
+    };
+
+    const total = Object.values(stats).reduce((sum, count) => sum + count, 0);
+
+    res.json({
+      success: true,
+      data: {
+        ...stats,
+        total,
+        percentage: {
+          confirmed: ((stats.confirmed / total) * 100).toFixed(2),
+          pending: ((stats.pending / total) * 100).toFixed(2),
+          completed: ((stats.completed / total) * 100).toFixed(2),
+          cancelled: ((stats.cancelled / total) * 100).toFixed(2)
+        }
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Get availability for a room during a date range
+ * GET /api/reservations/availability/room/:roomId?startDate=2026-09-01&endDate=2026-09-30
+ */
+export function checkRoomAvailability(req, res, next) {
+  try {
+    const { roomId } = req.params;
+    const { startDate, endDate } = req.query;
+
+    if (!startDate || !endDate) {
+      return res.status(400).json({
+        success: false,
+        message: 'Start date and end date are required'
+      });
+    }
+
+    const roomReservations = reservations.filter(r => 
+      r.roomId === roomId && r.status !== 'Cancelled'
+    );
+
+    const conflicts = findConflictingReservations(roomId, startDate, endDate);
+
+    res.json({
+      success: true,
+      data: {
+        roomId,
+        isAvailable: conflicts.length === 0,
+        conflictingReservations: conflicts,
+        totalReservations: roomReservations.length,
+        dateRange: { startDate, endDate }
       }
     });
   } catch (error) {

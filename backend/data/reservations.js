@@ -107,3 +107,160 @@ export function deleteReservation(id) {
   }
   return null;
 }
+
+/**
+ * Filter reservations by status
+ * @param {string} status - Reservation status (Confirmed, Pending, Completed, Cancelled)
+ * @returns {Array} Filtered reservations
+ */
+export function filterReservationsByStatus(status) {
+  if (!status) return reservations;
+  return reservations.filter(r => 
+    r.status.toLowerCase() === status.toLowerCase()
+  );
+}
+
+/**
+ * Filter reservations by date range
+ * @param {string} startDate - Start date (YYYY-MM-DD)
+ * @param {string} endDate - End date (YYYY-MM-DD)
+ * @returns {Array} Filtered reservations
+ */
+export function filterReservationsByDateRange(startDate, endDate) {
+  return reservations.filter(r => {
+    const resStart = new Date(r.checkInDate);
+    const resEnd = new Date(r.checkOutDate);
+    const filterStart = new Date(startDate);
+    const filterEnd = new Date(endDate);
+    
+    // Check if reservation overlaps with date range
+    return !(resEnd < filterStart || resStart > filterEnd);
+  });
+}
+
+/**
+ * Search reservations by multiple criteria
+ * @param {string} query - Search query (guest name, room number, reservation ID)
+ * @param {object} filters - Optional filters { status, startDate, endDate }
+ * @returns {Array} Matching reservations
+ */
+export function searchReservations(query, filters = {}) {
+  import { findGuestById } from './guests.js';
+  import { findRoomById } from './rooms.js';
+  
+  let results = reservations;
+
+  // Apply date filter if provided
+  if (filters.startDate && filters.endDate) {
+    results = results.filter(r => {
+      const resStart = new Date(r.checkInDate);
+      const resEnd = new Date(r.checkOutDate);
+      const filterStart = new Date(filters.startDate);
+      const filterEnd = new Date(filters.endDate);
+      return !(resEnd < filterStart || resStart > filterEnd);
+    });
+  }
+
+  // Apply status filter if provided
+  if (filters.status) {
+    results = results.filter(r => 
+      r.status.toLowerCase() === filters.status.toLowerCase()
+    );
+  }
+
+  // Apply search query if provided
+  if (query && query.trim()) {
+    const searchTerm = query.toLowerCase();
+    results = results.filter(r => {
+      // Search by reservation ID
+      if (r.id.toLowerCase().includes(searchTerm)) return true;
+      
+      // Search by room number
+      if (r.roomId.toLowerCase().includes(searchTerm)) return true;
+      
+      // Search by guest ID
+      if (r.guestId.toLowerCase().includes(searchTerm)) return true;
+      
+      // Search by special requests
+      if (r.specialRequests && r.specialRequests.toLowerCase().includes(searchTerm)) {
+        return true;
+      }
+      
+      return false;
+    });
+  }
+
+  return results;
+}
+
+/**
+ * Get reservations with advanced filtering and pagination
+ * @param {object} options - { status, startDate, endDate, page, limit, sortBy, sortOrder }
+ * @returns {object} { data, pagination }
+ */
+export function getReservationsWithFilters(options = {}) {
+  const {
+    status,
+    startDate,
+    endDate,
+    page = 1,
+    limit = 10,
+    sortBy = 'createdAt',
+    sortOrder = 'desc'
+  } = options;
+
+  let filtered = reservations;
+
+  // Apply status filter
+  if (status) {
+    filtered = filtered.filter(r => 
+      r.status.toLowerCase() === status.toLowerCase()
+    );
+  }
+
+  // Apply date range filter
+  if (startDate && endDate) {
+    filtered = filtered.filter(r => {
+      const resStart = new Date(r.checkInDate);
+      const resEnd = new Date(r.checkOutDate);
+      const filterStart = new Date(startDate);
+      const filterEnd = new Date(endDate);
+      return !(resEnd < filterStart || resStart > filterEnd);
+    });
+  }
+
+  // Sort results
+  filtered.sort((a, b) => {
+    let aVal = a[sortBy];
+    let bVal = b[sortBy];
+
+    if (typeof aVal === 'string') {
+      aVal = aVal.toLowerCase();
+      bVal = bVal.toLowerCase();
+    }
+
+    if (sortOrder === 'asc') {
+      return aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
+    } else {
+      return aVal < bVal ? 1 : aVal > bVal ? -1 : 0;
+    }
+  });
+
+  // Pagination
+  const totalCount = filtered.length;
+  const totalPages = Math.ceil(totalCount / limit);
+  const startIndex = (page - 1) * limit;
+  const paginatedData = filtered.slice(startIndex, startIndex + limit);
+
+  return {
+    data: paginatedData,
+    pagination: {
+      currentPage: page,
+      pageSize: limit,
+      totalCount,
+      totalPages,
+      hasNextPage: page < totalPages,
+      hasPreviousPage: page > 1
+    }
+  };
+}
