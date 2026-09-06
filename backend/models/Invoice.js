@@ -1,0 +1,4 @@
+import mongoose from 'mongoose';
+export default mongoose.model('Invoice', new mongoose.Schema({
+  invoiceNumber: { type: String, unique: true }, guest: { type: mongoose.Schema.Types.ObjectId, ref: 'Guest' }, reservation: { type: mongoose.Schema.Types.ObjectId, ref: 'Reservation' }, stay: { type: mongoose.Schema.Types.ObjectId, ref: 'Stay' }, roomCharges: { type: Number, default: 0 }, foodCharges: { type: Number, default: 0 }, additionalCharges: { type: Number, default: 0 }, discount: { type: Number, default: 0 }, totalAmount: { type: Number, default: 0 }, amountPaid: { type: Number, default: 0 }, paymentStatus: { type: String, enum: ['Unpaid', 'Partially Paid', 'Paid'], default: 'Unpaid' },
+}, { timestamps: true }));

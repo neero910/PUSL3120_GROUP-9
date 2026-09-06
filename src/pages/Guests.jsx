@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import PageHeader from '../components/layout/PageHeader'
 import GuestTable from '../components/guests/GuestTable'
-import { guests as fallbackGuests } from '../data/guests'
 import { fetchApiData, normalizeGuest } from '../services/api'
 
 function Guests() {
@@ -14,7 +13,7 @@ function Guests() {
   useEffect(() => {
     let isMounted = true
 
-    fetchApiData('guests', fallbackGuests, normalizeGuest)
+    fetchApiData('guests', [], normalizeGuest)
       .then((data) => {
         if (isMounted) {
           setGuests(data)
@@ -23,7 +22,7 @@ function Guests() {
       })
       .catch(() => {
         if (isMounted) {
-          setGuests(fallbackGuests)
+          setGuests([])
           setIsLoading(false)
         }
       })

@@ -1,0 +1,4 @@
+import mongoose from 'mongoose';
+export default mongoose.model('FoodOrder', new mongoose.Schema({
+  orderNumber: { type: String, unique: true }, guest: { type: mongoose.Schema.Types.ObjectId, ref: 'Guest' }, room: String, items: [{ foodItem: { type: mongoose.Schema.Types.ObjectId, ref: 'FoodItem' }, quantity: { type: Number, min: 1 }, price: Number, subtotal: Number }], totalAmount: { type: Number, min: 0 }, status: { type: String, enum: ['Pending', 'Preparing', 'Completed', 'Cancelled'], default: 'Pending' }, createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+}, { timestamps: true }));

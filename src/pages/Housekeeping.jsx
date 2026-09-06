@@ -4,21 +4,15 @@ import HousekeepingTaskCard from '../components/housekeeping/HousekeepingTaskCar
 import CleaningChecklistModal from '../components/housekeeping/CleaningChecklistModal'
 import AssignStaffModal from '../components/housekeeping/AssignStaffModal'
 import NewMaintenanceModal from '../components/housekeeping/NewMaintenanceModal'
-import {
-  housekeepingStaff as initialStaff,
-  initialHousekeepingTasks,
-  initialMaintenanceIssues,
-  initialInventorySupplies,
-  housekeepingStages
-} from '../data/housekeeping'
+import { housekeepingStages } from '../data/housekeeping'
 import { housekeepingApi } from '../services/api'
 
 function Housekeeping() {
   const [activeTab, setActiveTab] = useState('board') // 'board' | 'staff' | 'maintenance' | 'inventory'
-  const [tasks, setTasks] = useState(initialHousekeepingTasks)
-  const [staff, setStaff] = useState(initialStaff)
-  const [maintenanceIssues, setMaintenanceIssues] = useState(initialMaintenanceIssues)
-  const [inventory, setInventory] = useState(initialInventorySupplies)
+  const [tasks, setTasks] = useState([])
+  const [staff, setStaff] = useState([])
+  const [maintenanceIssues, setMaintenanceIssues] = useState([])
+  const [inventory, setInventory] = useState([])
   const [isLoading, setIsLoading] = useState(true)
 
   // Filters for the task board

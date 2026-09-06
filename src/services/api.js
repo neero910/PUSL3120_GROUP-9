@@ -3,23 +3,6 @@
  * Centralizes all API calls to the backend
  */
 
-import { guests as fallbackGuests } from '../data/guests.js'
-import { users as fallbackUsers } from '../data/users.js'
-import { rooms as fallbackRooms } from '../data/rooms.js'
-import {
-  initialHousekeepingTasks as fallbackTasks,
-  housekeepingStaff as fallbackStaff,
-  initialMaintenanceIssues as fallbackMaintenance,
-  initialInventorySupplies as fallbackInventory
-} from '../data/housekeeping.js'
-import {
-  stats as fallbackStats,
-  occupancyData as fallbackOccupancy,
-  todayCheckIns as fallbackCheckIns,
-  todayCheckOuts as fallbackCheckOuts,
-  recentReservations as fallbackRecentReservations,
-} from '../data/dashboard.js'
-
 const viteEnv = typeof import.meta !== 'undefined' ? import.meta.env : undefined
 
 // API Configuration - use a relative base by default so Vite proxy and tests both resolve correctly.
@@ -144,7 +127,7 @@ export const roomsApi = {
     if (params.floor && params.floor !== 'All' && params.floor !== 'All Floors') query.append('floor', params.floor)
 
     const qs = query.toString() ? `?${query.toString()}` : ''
-    return apiCall(`/rooms${qs}`, { fallback: { success: true, count: fallbackRooms.length, data: fallbackRooms } })
+    return apiCall(`/rooms${qs}`)
   },
 
   async getById(id) {
@@ -197,7 +180,7 @@ export const housekeepingApi = {
     if (params.assignedTo && params.assignedTo !== 'All') query.append('assignedTo', params.assignedTo)
 
     const qs = query.toString() ? `?${query.toString()}` : ''
-    return apiCall(`/housekeeping/tasks${qs}`, { fallback: { success: true, count: fallbackTasks.length, data: fallbackTasks } })
+    return apiCall(`/housekeeping/tasks${qs}`)
   },
 
   async getTaskById(id) {
@@ -251,7 +234,7 @@ export const housekeepingApi = {
 
   // Staff
   async getStaff() {
-    return apiCall('/housekeeping/staff', { fallback: { success: true, count: fallbackStaff.length, data: fallbackStaff } })
+    return apiCall('/housekeeping/staff')
   },
 
   async getStaffById(id) {
@@ -287,7 +270,7 @@ export const housekeepingApi = {
     if (params.roomNumber && params.roomNumber !== 'All') query.append('roomNumber', params.roomNumber)
 
     const qs = query.toString() ? `?${query.toString()}` : ''
-    return apiCall(`/housekeeping/maintenance${qs}`, { fallback: { success: true, count: fallbackMaintenance.length, data: fallbackMaintenance } })
+    return apiCall(`/housekeeping/maintenance${qs}`)
   },
 
   async getMaintenanceById(id) {
@@ -328,7 +311,7 @@ export const housekeepingApi = {
     if (params.status && params.status !== 'All') query.append('status', params.status)
 
     const qs = query.toString() ? `?${query.toString()}` : ''
-    return apiCall(`/housekeeping/inventory${qs}`, { fallback: { success: true, count: fallbackInventory.length, data: fallbackInventory } })
+    return apiCall(`/housekeeping/inventory${qs}`)
   },
 
   async getInventoryById(id) {
@@ -368,7 +351,7 @@ export const housekeepingApi = {
  */
 export const guestsApi = {
   async getAll() {
-    return apiCall('/guests', { fallback: { success: true, data: fallbackGuests } })
+    return apiCall('/guests')
   },
 
   async getById(id) {
@@ -405,7 +388,7 @@ export const guestsApi = {
  */
 export const reservationsApi = {
   async getAll() {
-    return apiCall('/reservations', { fallback: { success: true, data: [] } })
+    return apiCall('/reservations')
   },
 
   async getById(id) {
@@ -447,28 +430,16 @@ export const reservationsApi = {
 export const dashboardApi = {
   async getSummary() {
     return apiCall('/dashboard/summary', {
-      fallback: {
-        success: true,
-        data: {
-          rooms: { total: 30, available: 12, occupied: 15, reserved: 2, maintenance: 1 },
-          guests: { total: 40, active: 38 },
-          reservations: { total: 20, confirmed: 18, pending: 2 },
-          revenue: { today: 125000, total: 1500000 },
-          today: { checkIns: 3, checkOuts: 2 },
-          recentReservations: fallbackRecentReservations,
-        },
-      },
     })
   },
 
   async getOccupancy() {
     return apiCall('/dashboard/occupancy', {
-      fallback: { success: true, data: fallbackOccupancy },
     })
   },
 
   async getRevenue() {
-    return apiCall('/dashboard/revenue', { fallback: { success: true, data: [] } })
+    return apiCall('/dashboard/revenue')
   },
 }
 
@@ -505,12 +476,29 @@ export function normalizeUser(item = {}) {
 }
 
 export function normalizeDashboard(item = {}) {
+  const rooms = item.rooms ?? {}
+  const reservations = item.reservations ?? {}
+  const today = item.today ?? {}
+  const normalizeReservation = (reservation = {}) => ({
+    id: reservation.id ?? reservation.reservationNumber ?? reservation._id ?? 'Unknown',
+    guest: reservation.guest ?? reservation.guestName ?? 'Unknown guest',
+    room: reservation.room ?? reservation.roomNumber ?? 'N/A',
+    checkIn: String(reservation.checkIn ?? reservation.checkInDate ?? '').slice(0, 10),
+    checkOut: String(reservation.checkOut ?? reservation.checkOutDate ?? '').slice(0, 10),
+    status: reservation.status ?? 'Pending',
+  })
   return {
-    stats: Array.isArray(item.stats) ? item.stats : fallbackStats,
-    occupancyData: Array.isArray(item.occupancyData) ? item.occupancyData : fallbackOccupancy,
-    todayCheckIns: Array.isArray(item.todayCheckIns) ? item.todayCheckIns : fallbackCheckIns,
-    todayCheckOuts: Array.isArray(item.todayCheckOuts) ? item.todayCheckOuts : fallbackCheckOuts,
-    recentReservations: Array.isArray(item.recentReservations) ? item.recentReservations : fallbackRecentReservations,
+    stats: Array.isArray(item.stats) ? item.stats : [
+      { label: 'Total rooms', value: rooms.total ?? 0 },
+      { label: 'Available rooms', value: rooms.available ?? 0 },
+      { label: 'Occupied rooms', value: rooms.occupied ?? 0 },
+      { label: 'Total guests', value: item.guests?.total ?? 0 },
+      { label: 'Reservations', value: reservations.total ?? 0 },
+    ],
+    occupancyData: Array.isArray(item.occupancyData) ? item.occupancyData : [],
+    todayCheckIns: Array.isArray(item.todayCheckIns) ? item.todayCheckIns.map(normalizeReservation) : [],
+    todayCheckOuts: Array.isArray(item.todayCheckOuts) ? item.todayCheckOuts.map(normalizeReservation) : [],
+    recentReservations: Array.isArray(item.recentReservations) ? item.recentReservations.map(normalizeReservation) : [],
   }
 }
 
@@ -524,42 +512,42 @@ export function resolveApiData(endpoint, fallbackData) {
   }
 
   if (endpoint === 'rooms') {
-    return fallbackRooms
+    return []
   }
 
   if (endpoint === 'guests') {
-    return fallbackGuests
+    return []
   }
 
   if (endpoint === 'users') {
-    return fallbackUsers
+    return []
   }
 
   if (endpoint === 'dashboard') {
-    return normalizeDashboard()
+    return normalizeDashboard({})
   }
 
   if (endpoint === 'housekeeping/tasks') {
-    return fallbackTasks
+    return []
   }
 
   if (endpoint === 'housekeeping/staff') {
-    return fallbackStaff
+    return []
   }
 
   if (endpoint === 'housekeeping/maintenance') {
-    return fallbackMaintenance
+    return []
   }
 
   if (endpoint === 'housekeeping/inventory') {
-    return fallbackInventory
+    return []
   }
 
   return []
 }
 
 export async function fetchApiData(endpoint, fallbackData, mapper = (item) => item) {
-  const url = buildApiUrl(endpoint)
+  const url = buildApiUrl(endpoint === 'dashboard' ? 'dashboard/summary' : endpoint)
 
   try {
     const response = await fetch(url, {

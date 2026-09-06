@@ -1,12 +1,39 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import PageHeader from '../components/layout/PageHeader'
 import ReservationTable from '../components/reservations/ReservationTable'
-import { reservations, reservationStatuses } from '../data/reservations'
+import { reservationStatuses } from '../data/reservations'
+import { reservationsApi } from '../services/api'
+
+function normalizeReservation(item) {
+  const guest = item.guest || {}
+  const room = item.room || {}
+  return {
+    id: item.reservationNumber || item.id || item._id,
+    guest: guest.fullName || `${guest.firstName || ''} ${guest.lastName || ''}`.trim() || 'Unknown guest',
+    room: room.roomNumber || 'N/A',
+    checkIn: String(item.checkInDate || '').slice(0, 10),
+    checkOut: String(item.checkOutDate || '').slice(0, 10),
+    guests: (item.adults || item.numberOfAdults || 0) + (item.children || item.numberOfChildren || 0),
+    status: item.status || 'Pending',
+    amount: `LKR ${Number(item.totalAmount || 0).toLocaleString()}`,
+  }
+}
 
 function Reservations() {
-  const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState('All')
-  const [dateFilter, setDateFilter] = useState('')
+  const [searchTerm, setSearchTerm] = useState(() => JSON.parse(localStorage.getItem('reservation-filters') || '{}').searchTerm || '')
+  const [statusFilter, setStatusFilter] = useState(() => JSON.parse(localStorage.getItem('reservation-filters') || '{}').statusFilter || 'All')
+  const [dateFilter, setDateFilter] = useState(() => JSON.parse(localStorage.getItem('reservation-filters') || '{}').dateFilter || '')
+  const [reservations, setReservations] = useState([])
+
+  useEffect(() => {
+    reservationsApi.getAll().then((response) => {
+      setReservations((response.data || []).map(normalizeReservation))
+    }).catch(() => setReservations([]))
+  }, [])
+
+  useEffect(() => {
+    localStorage.setItem('reservation-filters', JSON.stringify({ searchTerm, statusFilter, dateFilter }))
+  }, [dateFilter, searchTerm, statusFilter])
 
   const filteredReservations = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase()
@@ -26,7 +53,7 @@ function Reservations() {
 
       return matchesSearch && matchesStatus && matchesDate
     })
-  }, [dateFilter, searchTerm, statusFilter])
+  }, [dateFilter, reservations, searchTerm, statusFilter])
 
   const hasActiveFilters = searchTerm || statusFilter !== 'All' || dateFilter
 

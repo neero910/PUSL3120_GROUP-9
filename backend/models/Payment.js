@@ -1,0 +1,4 @@
+import mongoose from 'mongoose';
+export default mongoose.model('Payment', new mongoose.Schema({
+  paymentNumber: { type: String, unique: true }, invoice: { type: mongoose.Schema.Types.ObjectId, ref: 'Invoice' }, guest: { type: mongoose.Schema.Types.ObjectId, ref: 'Guest' }, amount: { type: Number, required: true, min: 0 }, paymentMethod: { type: String, enum: ['Cash', 'Card', 'Bank Transfer'], required: true }, paymentDate: { type: Date, default: Date.now }, status: { type: String, enum: ['Completed', 'Pending', 'Refunded'], default: 'Completed' }, processedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+}, { timestamps: true }));

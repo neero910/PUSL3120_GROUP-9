@@ -10,13 +10,15 @@ import {
   updateRoomData,
   updateRoomStatus,
   deleteRoomData,
-  getRoomStats
+  getRoomStats,
+  getAvailableRooms
 } from '../controllers/roomController.js';
 
 const router = express.Router();
 
 // Summary statistics
 router.get('/stats/summary', getRoomStats);
+router.get('/available', getAvailableRooms);
 
 // List all rooms & filter
 router.get('/', getAllRooms);

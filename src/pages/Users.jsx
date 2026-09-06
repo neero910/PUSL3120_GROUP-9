@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
 import PageHeader from '../components/layout/PageHeader'
-import { users as fallbackUsers } from '../data/users'
 import { fetchApiData, normalizeUser } from '../services/api'
 
 function Users() {
@@ -14,7 +13,7 @@ function Users() {
   useEffect(() => {
     let isMounted = true
 
-    fetchApiData('users', fallbackUsers, normalizeUser)
+    fetchApiData('users', [], normalizeUser)
       .then((data) => {
         if (isMounted) {
           setUsers(data)
@@ -23,7 +22,7 @@ function Users() {
       })
       .catch(() => {
         if (isMounted) {
-          setUsers(fallbackUsers)
+          setUsers([])
           setIsLoading(false)
         }
       })

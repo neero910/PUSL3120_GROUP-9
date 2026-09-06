@@ -3,21 +3,10 @@ import StatCard from '../components/dashboard/StatCard'
 import OccupancyChart from '../components/dashboard/OccupancyChart'
 import ActivityTable from '../components/dashboard/TodayActivity'
 import RecentReservations from '../components/dashboard/RecentReservations'
-import {
-  stats as fallbackStats,
-  occupancyData as fallbackOccupancy,
-  todayCheckIns as fallbackCheckIns,
-  todayCheckOuts as fallbackCheckOuts,
-  recentReservations as fallbackRecentReservations,
-} from '../data/dashboard'
 import { fetchApiData, normalizeDashboard } from '../services/api'
 
 const initialDashboard = {
-  stats: fallbackStats,
-  occupancyData: fallbackOccupancy,
-  todayCheckIns: fallbackCheckIns,
-  todayCheckOuts: fallbackCheckOuts,
-  recentReservations: fallbackRecentReservations,
+  stats: [], occupancyData: [], todayCheckIns: [], todayCheckOuts: [], recentReservations: [],
 }
 
 function Dashboard() {

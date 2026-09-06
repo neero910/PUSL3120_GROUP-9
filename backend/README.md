@@ -2,10 +2,10 @@
 
 ## Overview
 
-This is the Node.js + Express backend server for the Hotel Management System Phase 2 (API Integration).
+This is the Node.js + Express + MongoDB backend server for the Hotel Management System.
 
-**Status:** Phase 2 - REST API Implementation
-**Data Storage:** Temporary in-memory (will be upgraded to MongoDB in Phase 3)
+**Status:** Phase 3 - MongoDB persistence and full-stack integration
+**Data Storage:** MongoDB through Mongoose
 
 ---
 
@@ -28,11 +28,9 @@ server/
 ├── middleware/
 │   ├── authMiddleware.js          # JWT verification & role authorization
 │   └── errorMiddleware.js         # Error handling utilities
-├── data/
-│   ├── users.js                   # Temporary users data
-│   ├── rooms.js                   # Temporary rooms data
-│   ├── guests.js                  # Temporary guests data
-│   └── reservations.js            # Temporary reservations data
+├── config/database.js              # MongoDB connection
+├── models/                         # Mongoose collection schemas
+├── seed/seedDatabase.js            # Idempotent development seed
 ├── server.js                       # Express app setup & server start
 ├── package.json                    # Dependencies
 ├── .env                            # Environment variables (local)
@@ -57,6 +55,7 @@ This installs:
 - **dotenv** - Environment variable management
 - **jsonwebtoken** - JWT token generation and verification
 - **bcryptjs** - Password hashing
+- **mongoose** - MongoDB ODM and validation
 
 ### 2. Configure Environment Variables
 
@@ -70,9 +69,9 @@ Edit `.env` with your configuration:
 
 ```env
 PORT=5000
-NODE_ENV=development
+MONGODB_URI=mongodb://127.0.0.1:27017/hotel_management
 CLIENT_URL=http://localhost:5173
-JWT_SECRET=hotel_management_secret_key_2026
+JWT_SECRET=replace_with_a_long_random_secret
 ```
 
 ### 3. Start the Server
@@ -90,6 +89,14 @@ npm start
 ```
 
 The server will start on `http://localhost:5000`
+
+### Seed development data
+
+```bash
+node seed/seedDatabase.js
+```
+
+The seed creates or updates three users, three rooms, and two guests. It does not clear the database.
 
 ---
 
@@ -133,6 +140,18 @@ The server will start on `http://localhost:5000`
 - **GET** `/api/dashboard/summary` - Summary statistics (auth required)
 - **GET** `/api/dashboard/occupancy` - Occupancy by room type (auth required)
 - **GET** `/api/dashboard/revenue` - Revenue data (auth required)
+
+### Restaurant, billing, and stays
+- **GET/POST/PUT/DELETE** `/api/menu-items` - Food item operations
+- **GET/POST/PUT** `/api/orders` - Food orders
+- **GET/GET/:id/POST** `/api/invoices` - Invoices
+- **GET/GET/:id/POST/PATCH** `/api/payments` - Payments
+- **GET** `/api/check-in/search`, `/api/check-in/reservation/:id`
+- **POST** `/api/check-in/confirm`
+- **GET** `/api/check-out/search`, `/api/check-out/guest/:guestId`
+- **POST** `/api/check-out/process`
+
+Reservations reject overlapping active bookings with HTTP 409. Available-room filtering can be performed with `/api/reservations/availability/room/:roomId`; the room availability query is evaluated by the backend.
 
 ---
 

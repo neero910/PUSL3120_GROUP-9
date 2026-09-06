@@ -1,166 +1,54 @@
-/**
- * Dashboard Controller
- * Provides summary statistics for the dashboard
- */
+import Room from '../models/Room.js';
+import Guest from '../models/Guest.js';
+import Reservation from '../models/Reservation.js';
 
-import { rooms } from '../data/rooms.js';
-import { guests } from '../data/guests.js';
-import { reservations } from '../data/reservations.js';
+const todayRange = () => {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+  return { $gte: start, $lt: end };
+};
 
-/**
- * Get dashboard summary
- * GET /api/dashboard/summary
- */
-export function getDashboardSummary(req, res, next) {
+export async function getDashboardSummary(req, res, next) {
   try {
-    // Room statistics
-    const totalRooms = rooms.length;
-    const availableRooms = rooms.filter(r => r.status === 'Available').length;
-    const occupiedRooms = rooms.filter(r => r.status === 'Occupied').length;
-    const maintenanceRooms = rooms.filter(r => r.status === 'Maintenance').length;
-    const reservedRooms = totalRooms - availableRooms - occupiedRooms - maintenanceRooms;
-    const occupancyRate = totalRooms > 0 ? ((occupiedRooms / totalRooms) * 100).toFixed(2) : 0;
-
-    // Guest statistics
-    const totalGuests = guests.length;
-    const activeGuests = guests.filter(g => g.status === 'Active').length;
-
-    // Reservation statistics
-    const totalReservations = reservations.length;
-    const confirmedReservations = reservations.filter(r => r.status === 'Confirmed').length;
-    const pendingReservations = reservations.filter(r => r.status === 'Pending').length;
-
-    // Revenue
-    const todayRevenue = reservations
-      .filter(r => {
-        const today = new Date().toISOString().split('T')[0];
-        return r.checkInDate === today && r.status !== 'Cancelled';
-      })
-      .reduce((sum, r) => sum + r.totalAmount, 0);
-
-    const totalRevenue = reservations
-      .filter(r => r.status !== 'Cancelled')
-      .reduce((sum, r) => sum + r.totalAmount, 0);
-
-    // Check-ins and check-outs today
-    const today = new Date().toISOString().split('T')[0];
-    const todayCheckIns = reservations.filter(r => r.checkInDate === today && r.status === 'Confirmed');
-    const todayCheckOuts = reservations.filter(r => r.checkOutDate === today && r.status === 'Confirmed');
-
-    // Recent reservations
-    const recentReservations = reservations
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-      .slice(0, 5)
-      .map(r => {
-        const guest = guests.find(g => g.id === r.guestId);
-        const room = rooms.find(room => room.id === r.roomId);
-        return {
-          id: r.id,
-          guestName: guest ? `${guest.firstName} ${guest.lastName}` : 'Unknown',
-          roomNumber: room ? room.roomNumber : 'N/A',
-          checkInDate: r.checkInDate,
-          checkOutDate: r.checkOutDate,
-          status: r.status,
-          totalAmount: r.totalAmount
-        };
-      });
-
-    res.json({
-      success: true,
-      data: {
-        rooms: {
-          total: totalRooms,
-          available: availableRooms,
-          occupied: occupiedRooms,
-          reserved: reservedRooms,
-          maintenance: maintenanceRooms,
-          occupancyRate: `${occupancyRate}%`
-        },
-        guests: {
-          total: totalGuests,
-          active: activeGuests
-        },
-        reservations: {
-          total: totalReservations,
-          confirmed: confirmedReservations,
-          pending: pendingReservations
-        },
-        revenue: {
-          today: todayRevenue,
-          total: totalRevenue
-        },
-        today: {
-          checkIns: todayCheckIns.length,
-          checkOuts: todayCheckOuts.length
-        },
-        recentReservations
-      }
+    const today = todayRange();
+    const [rooms, totalGuests, totalReservations, confirmed, pending, todayCheckIns, todayCheckOuts, revenue, recentReservations] = await Promise.all([
+      Room.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
+      Guest.countDocuments(), Reservation.countDocuments(),
+      Reservation.countDocuments({ status: 'Confirmed' }), Reservation.countDocuments({ status: 'Pending' }),
+      Reservation.find({ checkInDate: today, status: { $in: ['Confirmed', 'Checked In'] } }).populate('guest').populate('room'),
+      Reservation.find({ checkOutDate: today, status: { $in: ['Confirmed', 'Checked In'] } }).populate('guest').populate('room'),
+      Reservation.aggregate([{ $match: { status: { $ne: 'Cancelled' } } }, { $group: { _id: null, total: { $sum: '$totalAmount' } } }]),
+      Reservation.find().populate('guest').populate('room').sort({ createdAt: -1 }).limit(5),
+    ]);
+    const counts = Object.fromEntries(rooms.map((item) => [item._id, item.count]));
+    const totalRooms = rooms.reduce((sum, item) => sum + item.count, 0);
+    const mapReservation = (reservation) => ({
+      id: reservation.reservationNumber || reservation._id,
+      guest: reservation.guest?.fullName || `${reservation.guest?.firstName || ''} ${reservation.guest?.lastName || ''}`.trim() || 'Unknown guest',
+      room: reservation.room?.roomNumber || 'N/A',
+      checkIn: reservation.checkInDate?.toISOString().slice(0, 10) || '',
+      checkOut: reservation.checkOutDate?.toISOString().slice(0, 10) || '',
+      status: reservation.status || 'Pending',
     });
-  } catch (error) {
-    console.error('Dashboard summary error:', error);
-    next(error);
-  }
+    return res.json({ success: true, data: {
+      rooms: { total: totalRooms, available: counts.Available || 0, occupied: counts.Occupied || 0, reserved: counts.Reserved || 0, maintenance: counts.Maintenance || 0, occupancyRate: `${totalRooms ? ((counts.Occupied || 0) / totalRooms * 100).toFixed(2) : '0.00'}%` },
+      guests: { total: totalGuests }, reservations: { total: totalReservations, confirmed, pending },
+      revenue: { today: 0, total: revenue[0]?.total || 0 },
+      today: { checkIns: todayCheckIns.length, checkOuts: todayCheckOuts.length },
+      todayCheckIns: todayCheckIns.map(mapReservation), todayCheckOuts: todayCheckOuts.map(mapReservation),
+      recentReservations: recentReservations.map(mapReservation),
+    } });
+  } catch (error) { return next(error); }
 }
 
-/**
- * Get room occupancy data
- * GET /api/dashboard/occupancy
- */
-export function getOccupancyData(req, res, next) {
-  try {
-    const roomTypes = [...new Set(rooms.map(r => r.type))];
-    
-    const occupancyByType = roomTypes.map(type => {
-      const typeRooms = rooms.filter(r => r.type === type);
-      const occupied = typeRooms.filter(r => r.status === 'Occupied').length;
-      
-      return {
-        type,
-        total: typeRooms.length,
-        occupied,
-        available: typeRooms.length - occupied,
-        occupancyRate: typeRooms.length > 0 ? ((occupied / typeRooms.length) * 100).toFixed(2) : 0
-      };
-    });
-
-    res.json({
-      success: true,
-      data: occupancyByType
-    });
-  } catch (error) {
-    next(error);
-  }
+export async function getOccupancyData(req, res, next) {
+  try { const data = await Room.aggregate([{ $group: { _id: '$type', total: { $sum: 1 }, occupied: { $sum: { $cond: [{ $eq: ['$status', 'Occupied'] }, 1, 0] } } } }]); return res.json({ success: true, data: data.map((item) => ({ type: item._id, total: item.total, occupied: item.occupied, available: item.total - item.occupied })) }); }
+  catch (error) { return next(error); }
 }
 
-/**
- * Get revenue data
- * GET /api/dashboard/revenue
- */
-export function getRevenueData(req, res, next) {
-  try {
-    const today = new Date();
-    const last7Days = [];
-
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
-      const dateStr = date.toISOString().split('T')[0];
-      
-      const dayRevenue = reservations
-        .filter(r => r.checkInDate === dateStr && r.status !== 'Cancelled')
-        .reduce((sum, r) => sum + r.totalAmount, 0);
-
-      last7Days.push({
-        date: dateStr,
-        revenue: dayRevenue
-      });
-    }
-
-    res.json({
-      success: true,
-      data: last7Days
-    });
-  } catch (error) {
-    next(error);
-  }
+export async function getRevenueData(req, res, next) {
+  try { const data = await Reservation.aggregate([{ $match: { status: { $ne: 'Cancelled' } } }, { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, revenue: { $sum: '$totalAmount' } } }, { $sort: { _id: 1 } }]); return res.json({ success: true, data: data.map((item) => ({ date: item._id, revenue: item.revenue })) }); }
+  catch (error) { return next(error); }
 }

@@ -7,7 +7,6 @@ import RoomTableView from '../components/rooms/RoomTableView'
 import RoomDetailsModal from '../components/rooms/RoomDetailsModal'
 import RoomFormModal from '../components/rooms/RoomFormModal'
 import {
-  rooms as initialRooms,
   roomTypes,
   roomStatuses,
   housekeepingStatuses,
@@ -16,7 +15,7 @@ import {
 import { roomsApi } from '../services/api'
 
 function Rooms() {
-  const [roomList, setRoomList] = useState(initialRooms)
+  const [roomList, setRoomList] = useState([])
   const [viewMode, setViewMode] = useState('grid') // 'grid' | 'floorplan' | 'table'
   const [isLoading, setIsLoading] = useState(true)
 
@@ -46,13 +45,12 @@ function Rooms() {
     roomsApi.getAll()
       .then((res) => {
         if (!isMounted) return
-        const data = res?.data || (Array.isArray(res) ? res : initialRooms)
-        if (Array.isArray(data) && data.length > 0) {
-          setRoomList(data)
-        }
+        const data = res?.data || (Array.isArray(res) ? res : [])
+        setRoomList(Array.isArray(data) ? data : [])
       })
       .catch((err) => {
-        console.warn('Could not fetch rooms from API, using fallback:', err)
+        console.error('Could not fetch rooms from API:', err)
+        setRoomList([])
       })
       .finally(() => {
         if (isMounted) setIsLoading(false)

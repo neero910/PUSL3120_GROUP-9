@@ -1,221 +1,102 @@
-/**
- * Housekeeping Controller
- * Handles Tasks, Staff Roster, Maintenance Issues, and Supply Inventory
- */
-
-import {
-  housekeepingTasks,
-  housekeepingStaff,
-  maintenanceIssues,
-  inventorySupplies,
-  findTaskById,
-  addTask,
-  updateTask,
-  deleteTask,
-  findStaffById,
-  addStaff,
-  updateStaff,
-  deleteStaff,
-  findMaintenanceById,
-  addMaintenance,
-  updateMaintenance,
-  deleteMaintenance,
-  findInventoryById,
-  addInventory,
-  updateInventory,
-  restockInventory,
-  deleteInventory
-} from '../data/housekeeping.js';
-
-import { findRoomByNumber, updateRoom } from '../data/rooms.js';
+import HousekeepingTask from '../models/HousekeepingTask.js';
+import HousekeepingStaff from '../models/HousekeepingStaff.js';
+import MaintenanceIssue from '../models/MaintenanceIssue.js';
+import InventorySupply from '../models/InventorySupply.js';
+import Room from '../models/Room.js';
 
 // ==========================================
 // TASKS MANAGEMENT
 // ==========================================
 
-/**
- * Get all housekeeping tasks (with optional query filtering)
- * GET /api/housekeeping/tasks
- */
-export function getTasks(req, res, next) {
+export async function getTasks(req, res, next) {
   try {
     const { search, stage, floor, priority, assignedTo } = req.query;
-
-    let filtered = [...housekeepingTasks];
+    const query = {};
 
     if (search) {
-      const q = String(search).trim().toLowerCase();
-      filtered = filtered.filter(t =>
-        t.roomNumber.toLowerCase().includes(q) ||
-        t.assignedTo.toLowerCase().includes(q) ||
-        t.taskType.toLowerCase().includes(q) ||
-        (t.notes && t.notes.toLowerCase().includes(q))
-      );
+      query.$or = [
+        { roomNumber: new RegExp(search, 'i') },
+        { assignedTo: new RegExp(search, 'i') },
+        { taskType: new RegExp(search, 'i') },
+        { notes: new RegExp(search, 'i') }
+      ];
     }
+    if (stage && stage !== 'All') query.stage = new RegExp(`^${stage}$`, 'i');
+    if (floor && floor !== 'All') query.floor = parseInt(String(floor).replace(/[^0-9]/g, ''), 10);
+    if (priority && priority !== 'All') query.priority = new RegExp(`^${priority}$`, 'i');
+    if (assignedTo && assignedTo !== 'All') query.assignedTo = new RegExp(`^${assignedTo}$`, 'i');
 
-    if (stage && stage !== 'All') {
-      filtered = filtered.filter(t => t.stage.toLowerCase() === String(stage).toLowerCase());
-    }
-
-    if (floor && floor !== 'All') {
-      const floorNum = parseInt(String(floor).replace(/[^0-9]/g, ''), 10);
-      if (!isNaN(floorNum)) {
-        filtered = filtered.filter(t => t.floor === floorNum);
-      }
-    }
-
-    if (priority && priority !== 'All') {
-      filtered = filtered.filter(t => t.priority.toLowerCase() === String(priority).toLowerCase());
-    }
-
-    if (assignedTo && assignedTo !== 'All') {
-      filtered = filtered.filter(t => t.assignedTo.toLowerCase().includes(String(assignedTo).toLowerCase()));
-    }
-
-    res.json({
-      success: true,
-      count: filtered.length,
-      data: filtered
-    });
-  } catch (error) {
-    next(error);
-  }
+    const data = await HousekeepingTask.find(query).sort({ createdAt: -1 });
+    res.json({ success: true, count: data.length, data: data.map(d => ({ ...d.toObject(), id: d._id })) });
+  } catch (error) { next(error); }
 }
 
-/**
- * Get single task by ID or roomNumber
- * GET /api/housekeeping/tasks/:id
- */
-export function getTaskById(req, res, next) {
+export async function getTaskById(req, res, next) {
   try {
-    const task = findTaskById(req.params.id);
-
-    if (!task) {
-      return res.status(404).json({
-        success: false,
-        message: 'Housekeeping task not found'
-      });
-    }
-
-    res.json({
-      success: true,
-      data: task
-    });
-  } catch (error) {
-    next(error);
-  }
+    const task = await HousekeepingTask.findById(req.params.id);
+    if (!task) return res.status(404).json({ success: false, message: 'Housekeeping task not found' });
+    res.json({ success: true, data: { ...task.toObject(), id: task._id } });
+  } catch (error) { next(error); }
 }
 
-/**
- * Create new housekeeping task
- * POST /api/housekeeping/tasks
- */
-export function createTask(req, res, next) {
+export async function createTask(req, res, next) {
   try {
     const { roomNumber, roomType, floor, taskType, priority, stage, assignedTo, dueTime, checklist, notes } = req.body;
+    if (!roomNumber) return res.status(400).json({ success: false, message: 'Room number is required' });
 
-    if (!roomNumber) {
-      return res.status(400).json({
-        success: false,
-        message: 'Room number is required'
-      });
-    }
-
-    // Auto-lookup room details if roomType / floor not provided
-    const targetRoom = findRoomByNumber(roomNumber);
+    const targetRoom = await Room.findOne({ roomNumber });
     const resolvedType = roomType || (targetRoom ? targetRoom.type : 'Standard');
     const resolvedFloor = floor ? parseInt(floor, 10) : (targetRoom ? targetRoom.floor : parseInt(String(roomNumber)[0], 10) || 1);
 
-    const newTask = addTask({
-      roomNumber: String(roomNumber).trim(),
-      roomType: resolvedType,
-      floor: resolvedFloor,
-      taskType: taskType || 'Daily Turnover',
-      priority: priority || 'Normal',
-      stage: stage || 'Dirty / Needs Clean',
-      assignedTo: assignedTo || (housekeepingStaff[0]?.name || 'Kamani Silva'),
-      dueTime: dueTime || '15:00',
+    const defaultChecklist = [
+      { label: 'Strip and replace bed linen & pillowcases', completed: false },
+      { label: 'Sanitize and polish bathroom surfaces & mirrors', completed: false },
+      { label: 'Replenish bath towels, hand towels, and bathrobes', completed: false },
+      { label: 'Restock minibar, coffee pods, tea & complimentary water', completed: false },
+      { label: 'Vacuum carpets and mop hard floor surfaces', completed: false },
+      { label: 'Check lighting, TV remotes, AC temperature & safe lock', completed: false },
+      { label: 'Final room fragrance & supervisor inspection readiness', completed: false }
+    ];
+
+    const task = await HousekeepingTask.create({
+      roomNumber, roomType: resolvedType, floor: resolvedFloor,
+      taskType: taskType || 'Daily Turnover', priority: priority || 'Normal', stage: stage || 'Dirty / Needs Clean',
+      assignedTo: assignedTo || 'Kamani Silva', dueTime: dueTime || '15:00',
       startedAt: stage === 'In Progress' ? new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null,
-      checklist: Array.isArray(checklist) ? checklist : undefined,
-      notes: notes || ''
+      checklist: Array.isArray(checklist) ? checklist : defaultChecklist, notes: notes || ''
     });
 
-    // Sync room housekeeping status
     if (targetRoom) {
-      const roomHk = stage || 'Dirty / Needs Clean';
-      updateRoom(targetRoom.id, { housekeepingStatus: roomHk });
+      await Room.findByIdAndUpdate(targetRoom._id, { housekeepingStatus: stage || 'Dirty / Needs Clean' });
     }
 
-    res.status(201).json({
-      success: true,
-      message: `Cleaning task created for Room ${newTask.roomNumber}`,
-      data: newTask
-    });
-  } catch (error) {
-    next(error);
-  }
+    res.status(201).json({ success: true, message: `Cleaning task created for Room ${task.roomNumber}`, data: { ...task.toObject(), id: task._id } });
+  } catch (error) { next(error); }
 }
 
-/**
- * Update task
- * PUT/PATCH /api/housekeeping/tasks/:id
- */
-export function updateTaskData(req, res, next) {
+export async function updateTaskData(req, res, next) {
   try {
-    const task = findTaskById(req.params.id);
-
-    if (!task) {
-      return res.status(404).json({
-        success: false,
-        message: 'Housekeeping task not found'
-      });
-    }
-
-    const updatedTask = updateTask(req.params.id, req.body);
-
-    res.json({
-      success: true,
-      message: 'Task updated successfully',
-      data: updatedTask
-    });
-  } catch (error) {
-    next(error);
-  }
+    const task = await HousekeepingTask.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    if (!task) return res.status(404).json({ success: false, message: 'Housekeeping task not found' });
+    res.json({ success: true, message: 'Task updated successfully', data: { ...task.toObject(), id: task._id } });
+  } catch (error) { next(error); }
 }
 
-/**
- * Update task stage (Kanban move)
- * PATCH /api/housekeeping/tasks/:id/stage
- */
-export function updateTaskStage(req, res, next) {
+export async function updateTaskStage(req, res, next) {
   try {
-    const task = findTaskById(req.params.id);
-
-    if (!task) {
-      return res.status(404).json({
-        success: false,
-        message: 'Housekeeping task not found'
-      });
-    }
-
     const { stage } = req.body;
+    if (!stage) return res.status(400).json({ success: false, message: 'Stage is required' });
 
-    if (!stage) {
-      return res.status(400).json({
-        success: false,
-        message: 'Stage is required'
-      });
-    }
+    const task = await HousekeepingTask.findById(req.params.id);
+    if (!task) return res.status(404).json({ success: false, message: 'Housekeeping task not found' });
 
-    const updates = { stage };
+    task.stage = stage;
     if (stage === 'In Progress' && !task.startedAt) {
-      updates.startedAt = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      task.startedAt = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
+    await task.save();
 
-    const updatedTask = updateTask(req.params.id, updates);
-
-    // Sync room housekeepingStatus & room status
-    const targetRoom = findRoomByNumber(task.roomNumber);
+    const targetRoom = await Room.findOne({ roomNumber: task.roomNumber });
     if (targetRoom) {
       const roomUpdates = { housekeepingStatus: stage };
       if (stage === 'Clean & Ready' && targetRoom.status === 'Cleaning') {
@@ -226,50 +107,28 @@ export function updateTaskStage(req, res, next) {
       } else if (stage === 'Out of Order') {
         roomUpdates.status = 'Maintenance';
       }
-      updateRoom(targetRoom.id, roomUpdates);
+      await Room.findByIdAndUpdate(targetRoom._id, roomUpdates);
     }
 
-    res.json({
-      success: true,
-      message: `Task ${task.id} moved to ${stage}`,
-      data: updatedTask
-    });
-  } catch (error) {
-    next(error);
-  }
+    res.json({ success: true, message: `Task moved to ${stage}`, data: { ...task.toObject(), id: task._id } });
+  } catch (error) { next(error); }
 }
 
-/**
- * Update task checklist & completion
- * PATCH /api/housekeeping/tasks/:id/checklist
- */
-export function updateTaskChecklist(req, res, next) {
+export async function updateTaskChecklist(req, res, next) {
   try {
-    const task = findTaskById(req.params.id);
-
-    if (!task) {
-      return res.status(404).json({
-        success: false,
-        message: 'Housekeeping task not found'
-      });
-    }
-
     const { checklist, notes, isCleanAndReady } = req.body;
+    const task = await HousekeepingTask.findById(req.params.id);
+    if (!task) return res.status(404).json({ success: false, message: 'Housekeeping task not found' });
 
-    const updates = {};
-    if (Array.isArray(checklist)) updates.checklist = checklist;
-    if (notes !== undefined) updates.notes = notes;
-
-    if (isCleanAndReady) {
-      updates.stage = 'Clean & Ready';
-    }
-
-    const updatedTask = updateTask(req.params.id, updates);
+    if (Array.isArray(checklist)) task.checklist = checklist;
+    if (notes !== undefined) task.notes = notes;
+    if (isCleanAndReady) task.stage = 'Clean & Ready';
+    await task.save();
 
     if (isCleanAndReady) {
-      const targetRoom = findRoomByNumber(task.roomNumber);
+      const targetRoom = await Room.findOne({ roomNumber: task.roomNumber });
       if (targetRoom) {
-        updateRoom(targetRoom.id, {
+        await Room.findByIdAndUpdate(targetRoom._id, {
           housekeepingStatus: 'Clean & Ready',
           status: targetRoom.status === 'Cleaning' ? 'Available' : targetRoom.status,
           lastCleaned: 'Today, ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -277,621 +136,256 @@ export function updateTaskChecklist(req, res, next) {
       }
     }
 
-    res.json({
-      success: true,
-      message: isCleanAndReady ? `Room ${task.roomNumber} certified Clean & Ready!` : 'Checklist updated successfully',
-      data: updatedTask
-    });
-  } catch (error) {
-    next(error);
-  }
+    res.json({ success: true, message: isCleanAndReady ? `Room ${task.roomNumber} certified Clean & Ready!` : 'Checklist updated successfully', data: { ...task.toObject(), id: task._id } });
+  } catch (error) { next(error); }
 }
 
-/**
- * Assign staff to task
- * PATCH /api/housekeeping/tasks/:id/assign
- */
-export function assignTaskStaff(req, res, next) {
+export async function assignTaskStaff(req, res, next) {
   try {
-    const task = findTaskById(req.params.id);
-
-    if (!task) {
-      return res.status(404).json({
-        success: false,
-        message: 'Housekeeping task not found'
-      });
-    }
-
     const { assignedTo, priority, dueTime } = req.body;
-
-    if (!assignedTo) {
-      return res.status(400).json({
-        success: false,
-        message: 'Assigned staff name is required'
-      });
-    }
+    if (!assignedTo) return res.status(400).json({ success: false, message: 'Assigned staff name is required' });
 
     const updates = { assignedTo };
     if (priority) updates.priority = priority;
     if (dueTime) updates.dueTime = dueTime;
 
-    const updatedTask = updateTask(req.params.id, updates);
+    const task = await HousekeepingTask.findByIdAndUpdate(req.params.id, updates, { new: true });
+    if (!task) return res.status(404).json({ success: false, message: 'Housekeeping task not found' });
 
-    // Sync room assigned attendant
-    const targetRoom = findRoomByNumber(task.roomNumber);
-    if (targetRoom) {
-      updateRoom(targetRoom.id, { assignedAttendant: assignedTo });
-    }
-
-    res.json({
-      success: true,
-      message: `Attendant ${assignedTo} assigned to Room ${task.roomNumber}`,
-      data: updatedTask
-    });
-  } catch (error) {
-    next(error);
-  }
+    await Room.findOneAndUpdate({ roomNumber: task.roomNumber }, { assignedAttendant: assignedTo });
+    res.json({ success: true, message: `Attendant ${assignedTo} assigned`, data: { ...task.toObject(), id: task._id } });
+  } catch (error) { next(error); }
 }
 
-/**
- * Delete task
- * DELETE /api/housekeeping/tasks/:id
- */
-export function deleteTaskData(req, res, next) {
+export async function deleteTaskData(req, res, next) {
   try {
-    const deleted = deleteTask(req.params.id);
-
-    if (!deleted) {
-      return res.status(404).json({
-        success: false,
-        message: 'Housekeeping task not found'
-      });
-    }
-
-    res.json({
-      success: true,
-      message: 'Task deleted successfully',
-      data: deleted
-    });
-  } catch (error) {
-    next(error);
-  }
+    const task = await HousekeepingTask.findByIdAndDelete(req.params.id);
+    if (!task) return res.status(404).json({ success: false, message: 'Housekeeping task not found' });
+    res.json({ success: true, message: 'Task deleted successfully', data: { ...task.toObject(), id: task._id } });
+  } catch (error) { next(error); }
 }
 
-/**
- * Get Housekeeping summary statistics
- * GET /api/housekeeping/stats/summary
- */
-export function getHousekeepingStats(req, res, next) {
+export async function getHousekeepingStats(req, res, next) {
   try {
-    const totalTasks = housekeepingTasks.length;
-    const cleanCount = housekeepingTasks.filter(t => t.stage === 'Clean & Ready').length;
-    const inProgressCount = housekeepingTasks.filter(t => t.stage === 'In Progress').length;
-    const dirtyCount = housekeepingTasks.filter(t => t.stage === 'Dirty / Needs Clean').length;
-    const inspectionCount = housekeepingTasks.filter(t => t.stage === 'Inspection Required').length;
-    const oooCount = housekeepingTasks.filter(t => t.stage === 'Out of Order').length;
-    const openMaintenanceCount = maintenanceIssues.filter(m => m.status !== 'Resolved').length;
+    const [totalTasks, cleanCount, inProgressCount, dirtyCount, inspectionCount, oooCount, openMaintenanceCount] = await Promise.all([
+      HousekeepingTask.countDocuments(),
+      HousekeepingTask.countDocuments({ stage: 'Clean & Ready' }),
+      HousekeepingTask.countDocuments({ stage: 'In Progress' }),
+      HousekeepingTask.countDocuments({ stage: 'Dirty / Needs Clean' }),
+      HousekeepingTask.countDocuments({ stage: 'Inspection Required' }),
+      HousekeepingTask.countDocuments({ stage: 'Out of Order' }),
+      MaintenanceIssue.countDocuments({ status: { $ne: 'Resolved' } })
+    ]);
 
     res.json({
       success: true,
       data: {
-        totalTasks,
-        cleanCount,
-        inProgressCount,
-        dirtyCount,
-        inspectionCount,
-        oooCount,
-        openMaintenanceCount,
+        totalTasks, cleanCount, inProgressCount, dirtyCount, inspectionCount, oooCount, openMaintenanceCount,
         guestReadyPercentage: totalTasks > 0 ? Math.round((cleanCount / totalTasks) * 100) : 0
       }
     });
-  } catch (error) {
-    next(error);
-  }
+  } catch (error) { next(error); }
 }
 
 // ==========================================
 // STAFF ROSTER MANAGEMENT
 // ==========================================
 
-/**
- * Get all housekeeping staff
- * GET /api/housekeeping/staff
- */
-export function getStaff(req, res, next) {
+export async function getStaff(req, res, next) {
   try {
-    res.json({
-      success: true,
-      count: housekeepingStaff.length,
-      data: housekeepingStaff
-    });
-  } catch (error) {
-    next(error);
-  }
+    const data = await HousekeepingStaff.find();
+    res.json({ success: true, count: data.length, data: data.map(d => ({ ...d.toObject(), id: d._id })) });
+  } catch (error) { next(error); }
 }
 
-/**
- * Get staff by ID
- * GET /api/housekeeping/staff/:id
- */
-export function getStaffById(req, res, next) {
+export async function getStaffById(req, res, next) {
   try {
-    const member = findStaffById(req.params.id);
-
-    if (!member) {
-      return res.status(404).json({
-        success: false,
-        message: 'Staff member not found'
-      });
-    }
-
-    res.json({
-      success: true,
-      data: member
-    });
-  } catch (error) {
-    next(error);
-  }
+    const member = await HousekeepingStaff.findById(req.params.id);
+    if (!member) return res.status(404).json({ success: false, message: 'Staff member not found' });
+    res.json({ success: true, data: { ...member.toObject(), id: member._id } });
+  } catch (error) { next(error); }
 }
 
-/**
- * Create staff member
- * POST /api/housekeeping/staff
- */
-export function createStaff(req, res, next) {
+export async function createStaff(req, res, next) {
   try {
     const { name, role, shift, floor, phone, status } = req.body;
+    if (!name) return res.status(400).json({ success: false, message: 'Staff name is required' });
 
-    if (!name) {
-      return res.status(400).json({
-        success: false,
-        message: 'Staff name is required'
-      });
-    }
-
-    const newStaff = addStaff({
-      name,
-      role: role || 'Housekeeping Attendant',
-      shift: shift || 'Morning (07:00 - 15:30)',
-      floor: floor || 'Floor 1 & 2',
-      phone: phone || '',
-      status: status || 'On Duty'
-    });
-
-    res.status(201).json({
-      success: true,
-      message: 'Staff member added successfully',
-      data: newStaff
-    });
-  } catch (error) {
-    next(error);
-  }
+    const member = await HousekeepingStaff.create({ name, role, shift, floor, phone, status });
+    res.status(201).json({ success: true, message: 'Staff member added successfully', data: { ...member.toObject(), id: member._id } });
+  } catch (error) { next(error); }
 }
 
-/**
- * Update staff member
- * PUT/PATCH /api/housekeeping/staff/:id
- */
-export function updateStaffData(req, res, next) {
+export async function updateStaffData(req, res, next) {
   try {
-    const member = findStaffById(req.params.id);
-
-    if (!member) {
-      return res.status(404).json({
-        success: false,
-        message: 'Staff member not found'
-      });
-    }
-
-    const updated = updateStaff(req.params.id, req.body);
-
-    res.json({
-      success: true,
-      message: 'Staff member updated successfully',
-      data: updated
-    });
-  } catch (error) {
-    next(error);
-  }
+    const member = await HousekeepingStaff.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    if (!member) return res.status(404).json({ success: false, message: 'Staff member not found' });
+    res.json({ success: true, message: 'Staff member updated successfully', data: { ...member.toObject(), id: member._id } });
+  } catch (error) { next(error); }
 }
 
-/**
- * Delete staff member
- * DELETE /api/housekeeping/staff/:id
- */
-export function deleteStaffData(req, res, next) {
+export async function deleteStaffData(req, res, next) {
   try {
-    const deleted = deleteStaff(req.params.id);
-
-    if (!deleted) {
-      return res.status(404).json({
-        success: false,
-        message: 'Staff member not found'
-      });
-    }
-
-    res.json({
-      success: true,
-      message: 'Staff member removed successfully',
-      data: deleted
-    });
-  } catch (error) {
-    next(error);
-  }
+    const member = await HousekeepingStaff.findByIdAndDelete(req.params.id);
+    if (!member) return res.status(404).json({ success: false, message: 'Staff member not found' });
+    res.json({ success: true, message: 'Staff member removed successfully', data: { ...member.toObject(), id: member._id } });
+  } catch (error) { next(error); }
 }
 
 // ==========================================
 // MAINTENANCE TICKETS MANAGEMENT
 // ==========================================
 
-/**
- * Get all maintenance issues
- * GET /api/housekeeping/maintenance
- */
-export function getMaintenance(req, res, next) {
+export async function getMaintenance(req, res, next) {
   try {
     const { status, severity, roomNumber, search } = req.query;
-
-    let filtered = [...maintenanceIssues];
+    const query = {};
 
     if (search) {
-      const q = String(search).trim().toLowerCase();
-      filtered = filtered.filter(m =>
-        m.roomNumber.toLowerCase().includes(q) ||
-        m.title.toLowerCase().includes(q) ||
-        m.category.toLowerCase().includes(q) ||
-        m.assignedTechnician.toLowerCase().includes(q) ||
-        (m.notes && m.notes.toLowerCase().includes(q))
-      );
+      query.$or = [
+        { roomNumber: new RegExp(search, 'i') },
+        { title: new RegExp(search, 'i') },
+        { category: new RegExp(search, 'i') },
+        { assignedTechnician: new RegExp(search, 'i') },
+        { notes: new RegExp(search, 'i') }
+      ];
     }
+    if (status && status !== 'All') query.status = new RegExp(`^${status}$`, 'i');
+    if (severity && severity !== 'All') query.severity = new RegExp(`^${severity}$`, 'i');
+    if (roomNumber && roomNumber !== 'All') query.roomNumber = String(roomNumber);
 
-    if (status && status !== 'All') {
-      filtered = filtered.filter(m => m.status.toLowerCase() === String(status).toLowerCase());
-    }
-
-    if (severity && severity !== 'All') {
-      filtered = filtered.filter(m => m.severity.toLowerCase() === String(severity).toLowerCase());
-    }
-
-    if (roomNumber && roomNumber !== 'All') {
-      filtered = filtered.filter(m => m.roomNumber === String(roomNumber));
-    }
-
-    res.json({
-      success: true,
-      count: filtered.length,
-      data: filtered
-    });
-  } catch (error) {
-    next(error);
-  }
+    const data = await MaintenanceIssue.find(query).sort({ createdAt: -1 });
+    res.json({ success: true, count: data.length, data: data.map(d => ({ ...d.toObject(), id: d._id })) });
+  } catch (error) { next(error); }
 }
 
-/**
- * Get single maintenance issue
- * GET /api/housekeeping/maintenance/:id
- */
-export function getMaintenanceById(req, res, next) {
+export async function getMaintenanceById(req, res, next) {
   try {
-    const issue = findMaintenanceById(req.params.id);
-
-    if (!issue) {
-      return res.status(404).json({
-        success: false,
-        message: 'Maintenance issue not found'
-      });
-    }
-
-    res.json({
-      success: true,
-      data: issue
-    });
-  } catch (error) {
-    next(error);
-  }
+    const issue = await MaintenanceIssue.findById(req.params.id);
+    if (!issue) return res.status(404).json({ success: false, message: 'Maintenance issue not found' });
+    res.json({ success: true, data: { ...issue.toObject(), id: issue._id } });
+  } catch (error) { next(error); }
 }
 
-/**
- * Create maintenance issue (repair ticket)
- * POST /api/housekeeping/maintenance
- */
-export function createMaintenance(req, res, next) {
+export async function createMaintenance(req, res, next) {
   try {
     const { roomNumber, category, title, severity, reportedBy, assignedTechnician, notes, status } = req.body;
+    if (!roomNumber || !title) return res.status(400).json({ success: false, message: 'Room number and issue title are required' });
 
-    if (!roomNumber || !title) {
-      return res.status(400).json({
-        success: false,
-        message: 'Room number and issue title are required'
-      });
-    }
-
-    const newIssue = addMaintenance({
-      roomNumber: String(roomNumber).trim(),
-      category: category || 'General Repair',
-      title,
-      severity: severity || 'Normal',
-      reportedBy: reportedBy || 'Staff Member',
-      assignedTechnician: assignedTechnician || 'Nuwan Kumara',
-      notes: notes || '',
-      status: status || 'Open'
+    const issue = await MaintenanceIssue.create({
+      roomNumber, category, title, severity, reportedBy, assignedTechnician, notes, status
     });
 
-    // If high or urgent severity, automatically put room into Maintenance & Out of Order
     if (severity === 'High' || severity === 'Urgent') {
-      const targetRoom = findRoomByNumber(roomNumber);
-      if (targetRoom) {
-        updateRoom(targetRoom.id, {
-          status: 'Maintenance',
-          housekeepingStatus: 'Out of Order'
-        });
-      }
+      await Room.findOneAndUpdate({ roomNumber }, { status: 'Maintenance', housekeepingStatus: 'Out of Order' });
     }
 
-    res.status(201).json({
-      success: true,
-      message: `Maintenance ticket ${newIssue.id} logged for Room ${newIssue.roomNumber}`,
-      data: newIssue
-    });
-  } catch (error) {
-    next(error);
-  }
+    res.status(201).json({ success: true, message: `Maintenance ticket logged for Room ${issue.roomNumber}`, data: { ...issue.toObject(), id: issue._id } });
+  } catch (error) { next(error); }
 }
 
-/**
- * Update maintenance issue
- * PUT/PATCH /api/housekeeping/maintenance/:id
- */
-export function updateMaintenanceData(req, res, next) {
+export async function updateMaintenanceData(req, res, next) {
   try {
-    const issue = findMaintenanceById(req.params.id);
-
-    if (!issue) {
-      return res.status(404).json({
-        success: false,
-        message: 'Maintenance issue not found'
-      });
-    }
-
-    const updated = updateMaintenance(req.params.id, req.body);
-
-    res.json({
-      success: true,
-      message: 'Maintenance issue updated successfully',
-      data: updated
-    });
-  } catch (error) {
-    next(error);
-  }
+    const issue = await MaintenanceIssue.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    if (!issue) return res.status(404).json({ success: false, message: 'Maintenance issue not found' });
+    res.json({ success: true, message: 'Maintenance issue updated successfully', data: { ...issue.toObject(), id: issue._id } });
+  } catch (error) { next(error); }
 }
 
-/**
- * Resolve maintenance issue
- * PATCH /api/housekeeping/maintenance/:id/resolve
- */
-export function resolveMaintenance(req, res, next) {
+export async function resolveMaintenance(req, res, next) {
   try {
-    const issue = findMaintenanceById(req.params.id);
-
-    if (!issue) {
-      return res.status(404).json({
-        success: false,
-        message: 'Maintenance issue not found'
-      });
-    }
-
-    const updated = updateMaintenance(req.params.id, { status: 'Resolved' });
-
-    res.json({
-      success: true,
-      message: `Maintenance issue ${issue.id} marked as Resolved`,
-      data: updated
-    });
-  } catch (error) {
-    next(error);
-  }
+    const issue = await MaintenanceIssue.findByIdAndUpdate(req.params.id, { status: 'Resolved' }, { new: true });
+    if (!issue) return res.status(404).json({ success: false, message: 'Maintenance issue not found' });
+    res.json({ success: true, message: `Maintenance issue marked as Resolved`, data: { ...issue.toObject(), id: issue._id } });
+  } catch (error) { next(error); }
 }
 
-/**
- * Delete maintenance issue
- * DELETE /api/housekeeping/maintenance/:id
- */
-export function deleteMaintenanceData(req, res, next) {
+export async function deleteMaintenanceData(req, res, next) {
   try {
-    const deleted = deleteMaintenance(req.params.id);
-
-    if (!deleted) {
-      return res.status(404).json({
-        success: false,
-        message: 'Maintenance issue not found'
-      });
-    }
-
-    res.json({
-      success: true,
-      message: 'Maintenance issue deleted successfully',
-      data: deleted
-    });
-  } catch (error) {
-    next(error);
-  }
+    const issue = await MaintenanceIssue.findByIdAndDelete(req.params.id);
+    if (!issue) return res.status(404).json({ success: false, message: 'Maintenance issue not found' });
+    res.json({ success: true, message: 'Maintenance issue deleted successfully', data: { ...issue.toObject(), id: issue._id } });
+  } catch (error) { next(error); }
 }
 
 // ==========================================
 // SUPPLY INVENTORY MANAGEMENT
 // ==========================================
 
-/**
- * Get all inventory supplies
- * GET /api/housekeeping/inventory
- */
-export function getInventory(req, res, next) {
+export async function getInventory(req, res, next) {
   try {
     const { category, status, search } = req.query;
-
-    let filtered = [...inventorySupplies];
+    const query = {};
 
     if (search) {
-      const q = String(search).trim().toLowerCase();
-      filtered = filtered.filter(i =>
-        i.item.toLowerCase().includes(q) ||
-        i.category.toLowerCase().includes(q) ||
-        i.id.toLowerCase().includes(q)
-      );
+      query.$or = [
+        { item: new RegExp(search, 'i') },
+        { category: new RegExp(search, 'i') }
+      ];
     }
+    if (category && category !== 'All') query.category = new RegExp(`^${category}$`, 'i');
+    if (status && status !== 'All') query.status = new RegExp(`^${status}$`, 'i');
 
-    if (category && category !== 'All') {
-      filtered = filtered.filter(i => i.category.toLowerCase() === String(category).toLowerCase());
-    }
-
-    if (status && status !== 'All') {
-      filtered = filtered.filter(i => i.status.toLowerCase() === String(status).toLowerCase());
-    }
-
-    res.json({
-      success: true,
-      count: filtered.length,
-      data: filtered
-    });
-  } catch (error) {
-    next(error);
-  }
+    const data = await InventorySupply.find(query);
+    res.json({ success: true, count: data.length, data: data.map(d => ({ ...d.toObject(), id: d._id })) });
+  } catch (error) { next(error); }
 }
 
-/**
- * Get inventory item by ID
- * GET /api/housekeeping/inventory/:id
- */
-export function getInventoryById(req, res, next) {
+export async function getInventoryById(req, res, next) {
   try {
-    const item = findInventoryById(req.params.id);
-
-    if (!item) {
-      return res.status(404).json({
-        success: false,
-        message: 'Inventory item not found'
-      });
-    }
-
-    res.json({
-      success: true,
-      data: item
-    });
-  } catch (error) {
-    next(error);
-  }
+    const item = await InventorySupply.findById(req.params.id);
+    if (!item) return res.status(404).json({ success: false, message: 'Inventory item not found' });
+    res.json({ success: true, data: { ...item.toObject(), id: item._id } });
+  } catch (error) { next(error); }
 }
 
-/**
- * Create inventory item
- * POST /api/housekeeping/inventory
- */
-export function createInventory(req, res, next) {
+export async function createInventory(req, res, next) {
   try {
     const { item, category, inStock, minRequired, unit, status } = req.body;
+    if (!item) return res.status(400).json({ success: false, message: 'Item name is required' });
 
-    if (!item) {
-      return res.status(400).json({
-        success: false,
-        message: 'Item name is required'
-      });
-    }
-
-    const newItem = addInventory({
-      item,
-      category: category || 'General',
-      inStock: inStock !== undefined ? parseInt(inStock, 10) : 0,
-      minRequired: minRequired !== undefined ? parseInt(minRequired, 10) : 10,
-      unit: unit || 'Pcs',
-      status
+    const inventory = await InventorySupply.create({
+      item, category, inStock: inStock || 0, minRequired: minRequired || 10, unit, status
     });
-
-    res.status(201).json({
-      success: true,
-      message: 'Inventory item created successfully',
-      data: newItem
-    });
-  } catch (error) {
-    next(error);
-  }
+    res.status(201).json({ success: true, message: 'Inventory item created successfully', data: { ...inventory.toObject(), id: inventory._id } });
+  } catch (error) { next(error); }
 }
 
-/**
- * Update inventory item
- * PUT/PATCH /api/housekeeping/inventory/:id
- */
-export function updateInventoryData(req, res, next) {
+export async function updateInventoryData(req, res, next) {
   try {
-    const item = findInventoryById(req.params.id);
+    const item = await InventorySupply.findById(req.params.id);
+    if (!item) return res.status(404).json({ success: false, message: 'Inventory item not found' });
 
-    if (!item) {
-      return res.status(404).json({
-        success: false,
-        message: 'Inventory item not found'
-      });
-    }
+    if (req.body.inStock !== undefined) item.inStock = Number(req.body.inStock);
+    if (req.body.minRequired !== undefined) item.minRequired = Number(req.body.minRequired);
+    if (req.body.item !== undefined) item.item = req.body.item;
+    if (req.body.category !== undefined) item.category = req.body.category;
+    if (req.body.unit !== undefined) item.unit = req.body.unit;
+    if (req.body.status !== undefined) item.status = req.body.status;
+    
+    await item.save();
 
-    const updated = updateInventory(req.params.id, req.body);
-
-    res.json({
-      success: true,
-      message: 'Inventory item updated successfully',
-      data: updated
-    });
-  } catch (error) {
-    next(error);
-  }
+    res.json({ success: true, message: 'Inventory item updated successfully', data: { ...item.toObject(), id: item._id } });
+  } catch (error) { next(error); }
 }
 
-/**
- * Restock inventory item
- * POST/PATCH /api/housekeeping/inventory/:id/restock
- */
-export function restockInventoryItem(req, res, next) {
+export async function restockInventoryItem(req, res, next) {
   try {
-    const item = findInventoryById(req.params.id);
+    const item = await InventorySupply.findById(req.params.id);
+    if (!item) return res.status(404).json({ success: false, message: 'Inventory item not found' });
 
-    if (!item) {
-      return res.status(404).json({
-        success: false,
-        message: 'Inventory item not found'
-      });
-    }
+    const qty = Number(req.body.quantity) || (item.category === 'Linen' || item.category === 'Towels' ? 20 : 30);
+    item.inStock += qty;
+    await item.save();
 
-    const { quantity } = req.body;
-    const updated = restockInventory(req.params.id, quantity);
-
-    res.json({
-      success: true,
-      message: `Restocked ${item.item} successfully`,
-      data: updated
-    });
-  } catch (error) {
-    next(error);
-  }
+    res.json({ success: true, message: `Restocked ${item.item} successfully`, data: { ...item.toObject(), id: item._id } });
+  } catch (error) { next(error); }
 }
 
-/**
- * Delete inventory item
- * DELETE /api/housekeeping/inventory/:id
- */
-export function deleteInventoryData(req, res, next) {
+export async function deleteInventoryData(req, res, next) {
   try {
-    const deleted = deleteInventory(req.params.id);
-
-    if (!deleted) {
-      return res.status(404).json({
-        success: false,
-        message: 'Inventory item not found'
-      });
-    }
-
-    res.json({
-      success: true,
-      message: 'Inventory item deleted successfully',
-      data: deleted
-    });
-  } catch (error) {
-    next(error);
-  }
+    const item = await InventorySupply.findByIdAndDelete(req.params.id);
+    if (!item) return res.status(404).json({ success: false, message: 'Inventory item not found' });
+    res.json({ success: true, message: 'Inventory item deleted successfully', data: { ...item.toObject(), id: item._id } });
+  } catch (error) { next(error); }
 }

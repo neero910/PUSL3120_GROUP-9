@@ -4,7 +4,7 @@
 
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your_secret_key_change_this_in_production';
+const JWT_SECRET = () => process.env.JWT_SECRET || 'your_secret_key_change_this_in_production';
 
 export function authenticate(req, res, next) {
   try {
@@ -20,7 +20,7 @@ export function authenticate(req, res, next) {
     const token = authHeader.substring(7);
 
     try {
-      const decoded = jwt.verify(token, JWT_SECRET);
+      const decoded = jwt.verify(token, JWT_SECRET());
       req.user = decoded;
       next();
     } catch (err) {
@@ -69,7 +69,7 @@ export function generateToken(user) {
       name: user.name,
       role: user.role
     },
-    JWT_SECRET,
+    JWT_SECRET(),
     { expiresIn: '24h' }
   );
 }
