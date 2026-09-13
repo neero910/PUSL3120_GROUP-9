@@ -28,6 +28,7 @@
   "author": "Group 9",
   "license": "ISC",
   "devDependencies": {
+    "@jest/globals": "^30.5.1",
     "cross-env": "^10.1.0",
     "jest": "^30.5.1",
     "supertest": "^7.2.2"
@@ -35,6 +36,8 @@
   "jest": {
     "transform": {},
     "testEnvironment": "node",
-    "testMatch": ["**/tests/**/*.test.js"]
+    "testMatch": [
+      "**/tests/**/*.test.js"
+    ]
   }
 }
