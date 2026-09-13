@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { allAmenities } from '../../data/rooms'
 
 function RoomFormModal({ roomToEdit, onClose, onSave }) {
@@ -23,6 +23,42 @@ function RoomFormModal({ roomToEdit, onClose, onSave }) {
     )
   }
 
+  const DRAFT_KEY = 'roomFormDraft'
+
+  // Load draft from localStorage on mount
+  useEffect(() => {
+    if (!isEditing) {
+      const draft = localStorage.getItem(DRAFT_KEY)
+      if (draft) {
+        try {
+          const parsed = JSON.parse(draft)
+          if (parsed.roomNumber) setRoomNumber(parsed.roomNumber)
+          if (parsed.floor) setFloor(parsed.floor)
+          if (parsed.type) setType(parsed.type)
+          if (parsed.price) setPrice(parsed.price)
+          if (parsed.bedType) setBedType(parsed.bedType)
+          if (parsed.capacity) setCapacity(parsed.capacity)
+          if (parsed.view) setView(parsed.view)
+          if (parsed.status) setStatus(parsed.status)
+          if (parsed.housekeepingStatus) setHousekeepingStatus(parsed.housekeepingStatus)
+          if (parsed.assignedAttendant) setAssignedAttendant(parsed.assignedAttendant)
+          if (parsed.selectedAmenities) setSelectedAmenities(parsed.selectedAmenities)
+          if (parsed.notes !== undefined) setNotes(parsed.notes)
+        } catch (e) {
+          console.error('Failed to parse draft room', e)
+        }
+      }
+    }
+  }, [isEditing])
+
+  // Save draft to localStorage on change
+  useEffect(() => {
+    if (!isEditing) {
+      const draft = { roomNumber, floor, type, price, bedType, capacity, view, status, housekeepingStatus, assignedAttendant, selectedAmenities, notes }
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(draft))
+    }
+  }, [roomNumber, floor, type, price, bedType, capacity, view, status, housekeepingStatus, assignedAttendant, selectedAmenities, notes, isEditing])
+
   const handleSubmit = (e) => {
     e.preventDefault()
     if (!roomNumber.trim()) return
@@ -43,6 +79,10 @@ function RoomFormModal({ roomToEdit, onClose, onSave }) {
       currentGuest: roomToEdit?.currentGuest || null,
       lastCleaned: roomToEdit?.lastCleaned || 'Just now',
       notes
+    }
+
+    if (!isEditing) {
+      localStorage.removeItem(DRAFT_KEY)
     }
 
     onSave(roomPayload, isEditing)

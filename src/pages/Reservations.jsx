@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import io from 'socket.io-client'
 import PageHeader from '../components/layout/PageHeader'
 import ReservationTable from '../components/reservations/ReservationTable'
 import { reservationStatuses } from '../data/reservations'
@@ -29,6 +30,24 @@ function Reservations() {
     reservationsApi.getAll().then((response) => {
       setReservations((response.data || []).map(normalizeReservation))
     }).catch(() => setReservations([]))
+
+    const socket = io('http://localhost:5000');
+    
+    socket.on('reservationCreated', (newReservation) => {
+      setReservations((prev) => [normalizeReservation(newReservation), ...prev]);
+    });
+    
+    socket.on('reservationUpdated', (updatedReservation) => {
+      const normalized = normalizeReservation(updatedReservation);
+      setReservations((prev) => prev.map(res => res.id === normalized.id ? normalized : res));
+    });
+
+    socket.on('reservationDeleted', (deletedReservation) => {
+      const id = deletedReservation._id || deletedReservation.id || deletedReservation.reservationNumber;
+      setReservations((prev) => prev.filter(res => res.id !== id));
+    });
+
+    return () => socket.disconnect();
   }, [])
 
   useEffect(() => {

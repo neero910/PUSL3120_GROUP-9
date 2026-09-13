@@ -58,6 +58,13 @@ export async function apiCall(endpoint, options = {}) {
       }
 
       const errorData = await response.json().catch(() => ({}))
+      
+      // Handle Optimistic Concurrency Control (OCC) conflicts
+      if (response.status === 409) {
+        alert(errorData.message || 'Warning: The data you are trying to update has been changed by someone else. Please refresh and try again.');
+        throw new Error('ConcurrentEditConflict: ' + (errorData.message || `API error: ${response.status}`));
+      }
+
       throw new Error(errorData.message || `API error: ${response.status}`)
     }
 

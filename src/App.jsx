@@ -15,6 +15,7 @@ import Payments from './pages/Payments'
 import Invoices from './pages/Invoices'
 import Reports from './pages/Reports'
 import Users from './pages/Users'
+import Settings from './pages/Settings'
 import './App.css'
 
 function AppContent() {
@@ -60,7 +61,7 @@ function AppContent() {
         <Route path="/invoices" element={<ProtectedRoute><Invoices /></ProtectedRoute>} />
         <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
         <Route path="/users" element={<ProtectedRoute><Users /></ProtectedRoute>} />
-        <Route path="/settings" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
       </Routes>
     </MainLayout>
   )

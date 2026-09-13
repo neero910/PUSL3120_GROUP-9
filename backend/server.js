@@ -4,6 +4,8 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { connectDatabase } from './config/database.js';
+import http from 'http';
+import { Server } from 'socket.io';
 
 // Load environment variables
 dotenv.config();
@@ -21,9 +23,34 @@ import userRoutes from './routes/userRoutes.js';
 
 // Initialize Express app
 const app = express();
+const httpServer = http.createServer(app);
 const PORT = process.env.PORT || 5000;
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 const allowedOrigins = new Set([CLIENT_URL, 'http://localhost:5173', 'http://127.0.0.1:5173']);
+
+// Initialize Socket.io
+const io = new Server(httpServer, {
+  cors: {
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.has(origin)) return callback(null, true);
+      return callback(new Error('Origin is not allowed by CORS'));
+    },
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    credentials: true
+  }
+});
+
+app.use((req, res, next) => {
+  req.io = io;
+  next();
+});
+
+io.on('connection', (socket) => {
+  console.log('A client connected:', socket.id);
+  socket.on('disconnect', () => {
+    console.log('Client disconnected:', socket.id);
+  });
+});
 
 const menuItems = [
   { id: 'MI-101', name: 'Classic Breakfast', category: 'Breakfast', price: 'LKR 1400' },
@@ -326,7 +353,7 @@ app.use((err, req, res, next) => {
 
 export async function startServer() {
   await connectDatabase();
-  return app.listen(PORT, () => {
+  return httpServer.listen(PORT, () => {
     console.log(`🚀 Hotel Management API running on http://localhost:${PORT}`);
     console.log(`📡 CORS enabled for: ${CLIENT_URL}`);
     console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
@@ -336,7 +363,10 @@ export async function startServer() {
 const isDirectRun = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 
 if (isDirectRun) {
-  startServer();
+  startServer().catch((err) => {
+    console.error('❌ Failed to start server:', err.message);
+    process.exit(1);
+  });
 }
 
 export default app;
