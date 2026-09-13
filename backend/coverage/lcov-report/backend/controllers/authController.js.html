@@ -1,0 +1,112 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for backend/controllers/authController.js</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../prettify.css" />
+    <link rel="stylesheet" href="../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">backend/controllers</a> authController.js</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">58.82% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>20/34</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">68% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>17/25</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">60% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>3/5</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">80% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>4/5</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line medium'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a>
+<a name='L3'></a><a href='#L3'>3</a>
+<a name='L4'></a><a href='#L4'>4</a>
+<a name='L5'></a><a href='#L5'>5</a>
+<a name='L6'></a><a href='#L6'>6</a>
+<a name='L7'></a><a href='#L7'>7</a>
+<a name='L8'></a><a href='#L8'>8</a>
+<a name='L9'></a><a href='#L9'>9</a>
+<a name='L10'></a><a href='#L10'>10</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span></td><td class="text"><pre class="prettyprint lang-js">import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import User from '../models/User.js';
+import { generateToken, JWT_SECRET } from '../middleware/authMiddleware.js';
+&nbsp;
+const publicUser = <span class="fstat-no" title="function not covered" >(u</span>ser) =&gt; (<span class="cstat-no" title="statement not covered" >{ id: user.id, name: user.name, email: user.email, role: user.role, status: user.status })</span>;
+export async function register(req, res, next) { try { const { name, email, password, role = 'Receptionist' } = req.body; if (!name || !email || !password) return res.status(400).json({ success: false, message: 'Name, email, and password are required' }); <span class="missing-if-branch" title="else path not taken" >E</span>if (password.length &lt; 6) return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' }); <span class="cstat-no" title="statement not covered" >if (await User.exists({ email: email.toLowerCase() })) <span class="cstat-no" title="statement not covered" >return res.status(409).json({ success: false, message: 'Email already registered' }); </span></span>const user = <span class="cstat-no" title="statement not covered" >await User.create({ name, email, password: await bcrypt.hash(password, 10), role });</span> <span class="cstat-no" title="statement not covered" >return res.status(201).json({ success: true, message: 'User registered successfully', token: generateToken(user), user: publicUser(user) }); </span>} catch (error) { <span class="cstat-no" title="statement not covered" >return next(error); </span>} }
+export async function login(req, res, next) { try { const { email, password } = req.body; if (!email || !password) return res.status(400).json({ success: false, message: 'Email and password are required' }); const user = await User.findOne({ email: email.toLowerCase() }).select('+password'); <span class="missing-if-branch" title="else path not taken" >E</span>if (!user || <span class="branch-1 cbranch-no" title="branch not covered" >!user.isActive </span>|| <span class="branch-2 cbranch-no" title="branch not covered" >!(await bcrypt.compare(password, user.password)))</span> return res.status(401).json({ success: false, message: 'Invalid email or password' }); <span class="cstat-no" title="statement not covered" >return res.json({ success: true, message: 'Login successful', token: generateToken(user), user: publicUser(user) }); </span>} catch (error) { <span class="cstat-no" title="statement not covered" >return next(error); </span>} }
+export async function <span class="fstat-no" title="function not covered" >getCurrentUser(</span>req, res, next) { <span class="cstat-no" title="statement not covered" >try { const user = <span class="cstat-no" title="statement not covered" >await User.findById(req.user.id);</span> <span class="cstat-no" title="statement not covered" >if (!user) <span class="cstat-no" title="statement not covered" >return res.status(404).json({ success: false, message: 'User not found' }); <span class="cstat-no" title="statement not covered" ></span></span>return res.json({ success: true, user: publicUser(user) }); </span>} catch (error) { <span class="cstat-no" title="statement not covered" >return next(error); </span>} </span>}
+export function verifyToken(req, res) { const token = req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.slice(7) : null; if (!token) return res.status(401).json({ success: false, valid: false, message: 'No token provided' }); try { return res.json({ success: true, valid: true, user: jwt.verify(token, JWT_SECRET()) }); } catch { return res.status(401).json({ success: false, valid: false, message: 'Token is invalid or expired' }); } }</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-09-13T20:06:10.587Z
+            </div>
+        <script src="../../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../../sorter.js"></script>
+        <script src="../../block-navigation.js"></script>
+    </body>
+</html>
+    

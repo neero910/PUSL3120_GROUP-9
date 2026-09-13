@@ -1,0 +1,154 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for backend/controllers/reservationController.js</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../prettify.css" />
+    <link rel="stylesheet" href="../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">backend/controllers</a> reservationController.js</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">32.5% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>39/120</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">40% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>36/90</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">35.29% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>6/17</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">44.44% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>8/18</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line low'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a>
+<a name='L3'></a><a href='#L3'>3</a>
+<a name='L4'></a><a href='#L4'>4</a>
+<a name='L5'></a><a href='#L5'>5</a>
+<a name='L6'></a><a href='#L6'>6</a>
+<a name='L7'></a><a href='#L7'>7</a>
+<a name='L8'></a><a href='#L8'>8</a>
+<a name='L9'></a><a href='#L9'>9</a>
+<a name='L10'></a><a href='#L10'>10</a>
+<a name='L11'></a><a href='#L11'>11</a>
+<a name='L12'></a><a href='#L12'>12</a>
+<a name='L13'></a><a href='#L13'>13</a>
+<a name='L14'></a><a href='#L14'>14</a>
+<a name='L15'></a><a href='#L15'>15</a>
+<a name='L16'></a><a href='#L16'>16</a>
+<a name='L17'></a><a href='#L17'>17</a>
+<a name='L18'></a><a href='#L18'>18</a>
+<a name='L19'></a><a href='#L19'>19</a>
+<a name='L20'></a><a href='#L20'>20</a>
+<a name='L21'></a><a href='#L21'>21</a>
+<a name='L22'></a><a href='#L22'>22</a>
+<a name='L23'></a><a href='#L23'>23</a>
+<a name='L24'></a><a href='#L24'>24</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span></td><td class="text"><pre class="prettyprint lang-js">import mongoose from 'mongoose';
+import Reservation from '../models/Reservation.js';
+import Guest from '../models/Guest.js';
+import Room from '../models/Room.js';
+&nbsp;
+const activeStatuses = { $nin: ['Cancelled', 'Checked Out'] };
+const populate = (query) =&gt; query.populate('guest').populate('room').populate('createdBy', 'name email role');
+const byId = (id) =&gt; mongoose.isValidObjectId(id) ? { _id: id } : <span class="branch-1 cbranch-no" title="branch not covered" >{ reservationNumber: id };</span>
+const dateOnly = (value) =&gt; new Date(`${value}T00:00:00.000Z`);
+const conflictQuery = <span class="fstat-no" title="function not covered" >(r</span>oom, checkInDate, checkOutDate, exclude) =&gt; (<span class="cstat-no" title="statement not covered" >{ room, status: activeStatuses, checkInDate: { $lt: dateOnly(checkOutDate) }, checkOutDate: { $gt: dateOnly(checkInDate) }, ...(exclude ? { _id: { $ne: exclude } } : {}) })</span>;
+&nbsp;
+export async function <span class="fstat-no" title="function not covered" >getAllReservations(</span>req, res, next) { <span class="cstat-no" title="statement not covered" >try { const data = <span class="cstat-no" title="statement not covered" >await populate(Reservation.find().sort({ createdAt: -1 }));</span> <span class="cstat-no" title="statement not covered" >return res.json({ success: true, count: data.length, data }); </span>} catch (error) { <span class="cstat-no" title="statement not covered" >return next(error); </span>} </span>}
+export async function <span class="fstat-no" title="function not covered" >getReservationById(</span>req, res, next) { <span class="cstat-no" title="statement not covered" >try { const data = <span class="cstat-no" title="statement not covered" >await populate(Reservation.findOne(byId(req.params.id)));</span> <span class="cstat-no" title="statement not covered" >if (!data) <span class="cstat-no" title="statement not covered" >return res.status(404).json({ success: false, message: 'Reservation not found' }); <span class="cstat-no" title="statement not covered" ></span></span>return res.json({ success: true, data }); </span>} catch (error) { <span class="cstat-no" title="statement not covered" >return next(error); </span>} </span>}
+export async function createReservation(req, res, next) { try { const { guestId, roomId, checkInDate, checkOutDate, adults, children, status = 'Pending', specialRequests } = req.body; if (!guestId || !roomId || !checkInDate || !checkOutDate) return res.status(400).json({ success: false, message: 'Guest ID, room ID, check-in date, and check-out date are required' }); const inDate = dateOnly(checkInDate); const outDate = dateOnly(checkOutDate); <span class="missing-if-branch" title="else path not taken" >E</span>if (Number.isNaN(inDate.getTime()) || Number.isNaN(outDate.getTime()) || outDate &lt;= inDate) return res.status(400).json({ success: false, message: 'Check-out date must be after check-in date' }); const [guest, room, conflict] = <span class="cstat-no" title="statement not covered" >await Promise.all([Guest.findById(guestId), Room.findById(roomId), Reservation.exists(conflictQuery(roomId, checkInDate, checkOutDate))]);</span> <span class="cstat-no" title="statement not covered" >if (!guest) <span class="cstat-no" title="statement not covered" >return res.status(404).json({ success: false, message: 'Guest not found' }); <span class="cstat-no" title="statement not covered" ></span></span>if (!room) <span class="cstat-no" title="statement not covered" >return res.status(404).json({ success: false, message: 'Room not found' }); <span class="cstat-no" title="statement not covered" ></span></span>if (conflict) <span class="cstat-no" title="statement not covered" >return res.status(409).json({ success: false, message: 'Room is not available for the selected dates.' }); </span></span>const nights = <span class="cstat-no" title="statement not covered" >Math.ceil((outDate - inDate) / 86400000);</span> const data = <span class="cstat-no" title="statement not covered" >await Reservation.create({ reservationNumber: `RES-${Date.now()}`, guest: guestId, room: roomId, checkInDate: inDate, checkOutDate: outDate, adults: Number(adults) || 1, children: Number(children) || 0, status, totalAmount: room.price * nights, specialRequests, createdBy: req.user?.id });</span> <span class="cstat-no" title="statement not covered" >if (status === 'Confirmed') <span class="cstat-no" title="statement not covered" >await Room.findByIdAndUpdate(roomId, { status: 'Reserved' }); </span></span>const populatedData = <span class="cstat-no" title="statement not covered" >await populate(Reservation.findById(data._id));</span> <span class="cstat-no" title="statement not covered" >if (req.io) <span class="cstat-no" title="statement not covered" >req.io.emit('reservationCreated', populatedData); <span class="cstat-no" title="statement not covered" ></span></span>return res.status(201).json({ success: true, message: 'Reservation created successfully', data: populatedData }); </span>} catch (error) { <span class="cstat-no" title="statement not covered" >return next(error); </span>} }
+export async function updateReservationData(req, res, next) { try { const current = await Reservation.findOne(byId(req.params.id)); <span class="missing-if-branch" title="if path not taken" >I</span>if (!current) <span class="cstat-no" title="statement not covered" >return res.status(404).json({ success: false, message: 'Reservation not found' }); </span>const { checkInDate, checkOutDate, adults, children, status, specialRequests, __v } = req.body; const nextIn = checkInDate || current.checkInDate.toISOString().slice(0, 10); const nextOut = checkOutDate || current.checkOutDate.toISOString().slice(0, 10); <span class="missing-if-branch" title="if path not taken" >I</span>if (dateOnly(nextOut) &lt;= dateOnly(nextIn)) <span class="cstat-no" title="statement not covered" >return res.status(400).json({ success: false, message: 'Check-out date must be after check-in date' }); <span class="missing-if-branch" title="if path not taken" >I</span></span>if (checkInDate || checkOutDate) { const conflict = <span class="cstat-no" title="statement not covered" >await Reservation.exists(conflictQuery(current.room, nextIn, nextOut, current._id));</span> <span class="cstat-no" title="statement not covered" >if (conflict) <span class="cstat-no" title="statement not covered" >return res.status(409).json({ success: false, message: 'Room is not available for the selected dates.' }); </span></span>} const room = await Room.findById(current.room); const updates = { ...(checkInDate &amp;&amp; <span class="branch-1 cbranch-no" title="branch not covered" >{ checkInDate: dateOnly(nextIn) })</span>, ...(checkOutDate &amp;&amp; <span class="branch-1 cbranch-no" title="branch not covered" >{ checkOutDate: dateOnly(nextOut) })</span>, ...(adults !== undefined &amp;&amp; <span class="branch-1 cbranch-no" title="branch not covered" >{ adults: Number(adults) })</span>, ...(children !== undefined &amp;&amp; <span class="branch-1 cbranch-no" title="branch not covered" >{ children: Number(children) })</span>, ...(status !== undefined &amp;&amp; { status }), ...(specialRequests !== undefined &amp;&amp; <span class="branch-1 cbranch-no" title="branch not covered" >{ specialRequests })</span> }; <span class="missing-if-branch" title="if path not taken" >I</span>if (checkInDate || checkOutDate) <span class="cstat-no" title="statement not covered" >updates.totalAmount = room.price * Math.ceil((dateOnly(nextOut) - dateOnly(nextIn)) / 86400000); </span>const filter = byId(req.params.id); <span class="missing-if-branch" title="else path not taken" >E</span>if (__v !== undefined) filter.__v = __v; const data = await populate(Reservation.findOneAndUpdate(filter, { ...updates, $inc: { __v: 1 } }, { new: true, runValidators: true })); <span class="missing-if-branch" title="else path not taken" >E</span>if (!data) { const exists = await Reservation.exists(byId(req.params.id)); <span class="missing-if-branch" title="else path not taken" >E</span>if (exists) return res.status(409).json({ success: false, message: 'Conflict: Document has been modified by another user. Please refresh and try again.', error: 'VersionError' }); <span class="cstat-no" title="statement not covered" >return res.status(404).json({ success: false, message: 'Reservation not found' }); </span>} <span class="cstat-no" title="statement not covered" >if (req.io) <span class="cstat-no" title="statement not covered" >req.io.emit('reservationUpdated', data); <span class="cstat-no" title="statement not covered" ></span></span>return res.json({ success: true, message: 'Reservation updated successfully', data }); </span>} catch (error) { <span class="cstat-no" title="statement not covered" >return next(error); </span>} }
+export async function <span class="fstat-no" title="function not covered" >deleteReservationData(</span>req, res, next) { <span class="cstat-no" title="statement not covered" >try { const data = <span class="cstat-no" title="statement not covered" >await populate(Reservation.findOneAndUpdate(byId(req.params.id), { status: 'Cancelled' }, { new: true }));</span> <span class="cstat-no" title="statement not covered" >if (!data) <span class="cstat-no" title="statement not covered" >return res.status(404).json({ success: false, message: 'Reservation not found' }); <span class="cstat-no" title="statement not covered" ></span></span>if (req.io) <span class="cstat-no" title="statement not covered" >req.io.emit('reservationDeleted', data); <span class="cstat-no" title="statement not covered" ></span></span>return res.json({ success: true, message: 'Reservation cancelled successfully', data }); </span>} catch (error) { <span class="cstat-no" title="statement not covered" >return next(error); </span>} </span>}
+export async function <span class="fstat-no" title="function not covered" >getReservationsByGuest(</span>req, res, next) { <span class="cstat-no" title="statement not covered" >try { const data = <span class="cstat-no" title="statement not covered" >await populate(Reservation.find({ guest: req.params.guestId }).sort({ createdAt: -1 }));</span> <span class="cstat-no" title="statement not covered" >return res.json({ success: true, data }); </span>} catch (error) { <span class="cstat-no" title="statement not covered" >return next(error); </span>} </span>}
+export async function <span class="fstat-no" title="function not covered" >getReservationStats(</span>req, res, next) { <span class="cstat-no" title="statement not covered" >try { const [totalReservations, confirmedReservations, pendingReservations, completedReservations, cancelledReservations, revenue] = <span class="cstat-no" title="statement not covered" >await Promise.all([Reservation.countDocuments(), Reservation.countDocuments({ status: 'Confirmed' }), Reservation.countDocuments({ status: 'Pending' }), Reservation.countDocuments({ status: 'Checked Out' }), Reservation.countDocuments({ status: 'Cancelled' }), Reservation.aggregate([{ $match: { status: { $ne: 'Cancelled' } } }, { $group: { _id: null, total: { $sum: '$totalAmount' } } }])]);</span> <span class="cstat-no" title="statement not covered" >return res.json({ success: true, data: { totalReservations, confirmedReservations, pendingReservations, completedReservations, cancelledReservations, totalRevenue: revenue[0]?.total || 0 } }); </span>} catch (error) { <span class="cstat-no" title="statement not covered" >return next(error); </span>} </span>}
+export async function <span class="fstat-no" title="function not covered" >filterByStatus(</span>req, res, next) { <span class="cstat-no" title="statement not covered" >try { const data = <span class="cstat-no" title="statement not covered" >await populate(Reservation.find({ status: req.query.status }));</span> <span class="cstat-no" title="statement not covered" >return res.json({ success: true, count: data.length, data }); </span>} catch (error) { <span class="cstat-no" title="statement not covered" >return next(error); </span>} </span>}
+export async function <span class="fstat-no" title="function not covered" >filterByDateRange(</span>req, res, next) { <span class="cstat-no" title="statement not covered" >try { const data = <span class="cstat-no" title="statement not covered" >await populate(Reservation.find({ checkInDate: { $gte: dateOnly(req.query.startDate), $lte: dateOnly(req.query.endDate) } }));</span> <span class="cstat-no" title="statement not covered" >return res.json({ success: true, count: data.length, data, dateRange: req.query }); </span>} catch (error) { <span class="cstat-no" title="statement not covered" >return next(error); </span>} </span>}
+export async function <span class="fstat-no" title="function not covered" >searchReservationsHandler(</span>req, res, next) { <span class="cstat-no" title="statement not covered" >try { const query = <span class="cstat-no" title="statement not covered" >req.query.query ? new RegExp(req.query.query, 'i') : null;</span> const data = <span class="cstat-no" title="statement not covered" >await populate(Reservation.find(query ? { $or: [{ reservationNumber: query }] } : {}));</span> <span class="cstat-no" title="statement not covered" >return res.json({ success: true, count: data.length, data }); </span>} catch (error) { <span class="cstat-no" title="statement not covered" >return next(error); </span>} </span>}
+export async function <span class="fstat-no" title="function not covered" >getFilteredReservations(</span>req, res, next) { <span class="cstat-no" title="statement not covered" >try { const page = <span class="cstat-no" title="statement not covered" >Number(req.query.page) || 1;</span> const limit = <span class="cstat-no" title="statement not covered" >Number(req.query.limit) || 10;</span> const filter = <span class="cstat-no" title="statement not covered" >req.query.status ? { status: req.query.status } : {};</span> const [data, total] = <span class="cstat-no" title="statement not covered" >await Promise.all([populate(Reservation.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit)), Reservation.countDocuments(filter)]);</span> <span class="cstat-no" title="statement not covered" >return res.json({ success: true, data, count: data.length, pagination: { page, limit, total, pages: Math.ceil(total / limit) } }); </span>} catch (error) { <span class="cstat-no" title="statement not covered" >return next(error); </span>} </span>}
+export async function <span class="fstat-no" title="function not covered" >getReservationStatsByStatus(</span>req, res, next) { <span class="cstat-no" title="statement not covered" >try { const data = <span class="cstat-no" title="statement not covered" >await Reservation.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]);</span> <span class="cstat-no" title="statement not covered" >return res.json({ success: true, data }); </span>} catch (error) { <span class="cstat-no" title="statement not covered" >return next(error); </span>} </span>}
+export async function checkRoomAvailability(req, res, next) { try { const { checkInDate, checkOutDate } = req.query; <span class="missing-if-branch" title="else path not taken" >E</span>if (!checkInDate || <span class="branch-1 cbranch-no" title="branch not covered" >!checkOutDate)</span> return res.status(400).json({ success: false, message: 'checkInDate and checkOutDate are required' }); const available = <span class="cstat-no" title="statement not covered" >!(await Reservation.exists(conflictQuery(req.params.roomId, checkInDate, checkOutDate)));</span> <span class="cstat-no" title="statement not covered" >return res.json({ success: true, available }); </span>} catch (error) { <span class="cstat-no" title="statement not covered" >return next(error); </span>} }</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-09-13T20:06:10.587Z
+            </div>
+        <script src="../../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../../sorter.js"></script>
+        <script src="../../block-navigation.js"></script>
+    </body>
+</html>
+    
