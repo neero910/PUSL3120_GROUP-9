@@ -152,6 +152,22 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// DB connectivity diagnostic (safe — no credentials exposed)
+app.get('/api/db-status', async (req, res) => {
+  const mongoose = (await import('mongoose')).default;
+  const states = ['disconnected', 'connected', 'connecting', 'disconnecting'];
+  const readyState = mongoose.connection.readyState;
+  const dbName = mongoose.connection.name || 'unknown';
+  const hasUri = !!(process.env.MONGODB_URI);
+  res.json({
+    success: readyState === 1,
+    mongoReadyState: readyState,
+    mongoStateName: states[readyState] || 'unknown',
+    databaseName: dbName,
+    mongoUriConfigured: hasUri,
+  });
+});
+
 app.get('/api/menu-items', (req, res) => {
   res.json({ success: true, data: menuItems });
 });
