@@ -31,8 +31,22 @@ function Reservations() {
       setReservations((response.data || []).map(normalizeReservation))
     }).catch(() => setReservations([]))
 
-    const socket = io('http://localhost:5000');
-    
+    // Determine WebSocket URL:
+    // 1. Use VITE_WS_URL if explicitly set (e.g., pointing to Render/Railway backend)
+    // 2. Fall back to localhost only during local development
+    // 3. Skip WebSocket silently in production when no WS URL is configured
+    const wsUrl = import.meta.env.VITE_WS_URL ||
+      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? 'http://localhost:5000'
+        : null);
+
+    if (!wsUrl) {
+      // Production without dedicated backend – skip WebSocket gracefully
+      return;
+    }
+
+    const socket = io(wsUrl, { transports: ['websocket', 'polling'] });
+
     socket.on('reservationCreated', (newReservation) => {
       setReservations((prev) => [normalizeReservation(newReservation), ...prev]);
     });

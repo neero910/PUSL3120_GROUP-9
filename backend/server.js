@@ -26,13 +26,22 @@ const app = express();
 const httpServer = http.createServer(app);
 const PORT = process.env.PORT || 5000;
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
-const allowedOrigins = new Set([CLIENT_URL, 'http://localhost:5173', 'http://127.0.0.1:5173']);
+
+function isAllowedOrigin(origin) {
+  if (!origin) return true; // server-to-server or same-origin
+  if (origin === CLIENT_URL) return true;
+  if (origin === 'http://localhost:5173') return true;
+  if (origin === 'http://127.0.0.1:5173') return true;
+  // Allow any Vercel preview / production deployment
+  if (/^https:\/\/[a-z0-9-]+(\.vercel\.app)$/.test(origin)) return true;
+  return false;
+}
 
 // Initialize Socket.io
 const io = new Server(httpServer, {
   cors: {
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.has(origin)) return callback(null, true);
+      if (isAllowedOrigin(origin)) return callback(null, true);
       return callback(new Error('Origin is not allowed by CORS'));
     },
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
@@ -121,7 +130,7 @@ const checkOuts = [
 app.use(express.json());
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.has(origin)) return callback(null, true);
+    if (isAllowedOrigin(origin)) return callback(null, true);
     return callback(new Error('Origin is not allowed by CORS'));
   },
   credentials: true,
