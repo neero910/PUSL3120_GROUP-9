@@ -10,10 +10,10 @@ import User from '../models/User.js';
 dotenv.config();
 
 const users = [
-  { name: 'Admin User',        email: 'admin@hotel.com',        role: 'Administrator',    password: 'password123' },
-  { name: 'Manager User',      email: 'manager@hotel.com',      role: 'Manager',          password: 'password123' },
-  { name: 'Receptionist User', email: 'receptionist@hotel.com', role: 'Receptionist',     password: 'password123' },
-  { name: 'Restaurant Staff',  email: 'restaurant@hotel.com',   role: 'Restaurant Staff', password: 'password123' },
+  { name: 'Admin User', email: 'admin@hotel.com', role: 'Administrator', password: 'password123' },
+  { name: 'Manager User', email: 'manager@hotel.com', role: 'Manager', password: 'password123' },
+  { name: 'Receptionist User', email: 'receptionist@hotel.com', role: 'Receptionist', password: 'password123' },
+  { name: 'Restaurant Staff', email: 'restaurant@hotel.com', role: 'Restaurant Staff', password: 'password123' },
 ];
 
 await connectDatabase();

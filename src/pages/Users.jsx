@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import PageHeader from '../components/layout/PageHeader'
+import AddUserModal from '../components/users/AddUserModal'
+import EditPermissionsModal from '../components/users/EditPermissionsModal'
 import { fetchApiData, normalizeUser } from '../services/api'
 
 function Users() {
@@ -9,6 +11,14 @@ function Users() {
   const [roleFilter, setRoleFilter] = useState('All Roles')
   const [statusFilter, setStatusFilter] = useState('All Status')
   const [selectedUser, setSelectedUser] = useState(null)
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [showPermissionsModal, setShowPermissionsModal] = useState(false)
+  const [toastMessage, setToastMessage] = useState(null)
+
+  const showToast = (msg) => {
+    setToastMessage(msg)
+    setTimeout(() => setToastMessage(null), 3500)
+  }
 
   useEffect(() => {
     let isMounted = true
@@ -34,7 +44,7 @@ function Users() {
 
   const filteredUsers = useMemo(() => users.filter((user) => {
     const normalizedSearch = searchTerm.trim().toLowerCase()
-    const matchesSearch = !normalizedSearch || [user.name, user.email, user.role].some((value) => value.toLowerCase().includes(normalizedSearch))
+    const matchesSearch = !normalizedSearch || [user.name, user.email, user.role].some((value) => value && value.toLowerCase().includes(normalizedSearch))
     const matchesRole = roleFilter === 'All Roles' || user.role === roleFilter
     const matchesStatus = statusFilter === 'All Status' || user.status === statusFilter
 
@@ -44,12 +54,35 @@ function Users() {
   const activeUsers = users.filter((user) => user.status === 'Active').length
   const roles = [...new Set(users.map((user) => user.role))]
 
+  const handleAddUser = (newUser) => {
+    setUsers(prev => [newUser, ...prev])
+    showToast(`Account created for ${newUser.name}!`)
+  }
+
+  const handleSavePermissions = (userId, perms) => {
+    showToast(`Permissions updated for user!`)
+  }
+
   return (
     <div className="page-stack">
+      {toastMessage && (
+        <div className="toast-notification">
+          <span>✓ {toastMessage}</span>
+        </div>
+      )}
+
       <PageHeader
         title="Users"
         subtitle="Manage access, roles and team activity"
-        actions={<button type="button" className="primary-button">Add user</button>}
+        actions={
+          <button
+            type="button"
+            className="primary-button"
+            onClick={() => setShowAddModal(true)}
+          >
+            + Add User
+          </button>
+        }
       />
 
       <div className="directory-summary user-summary">
@@ -125,7 +158,7 @@ function Users() {
               <div className="large-avatar">{selectedUser.name.split(' ').map((part) => part[0]).join('').slice(0, 2)}</div>
               <div><h3>{selectedUser.name}</h3><p>{selectedUser.role}</p></div>
             </div>
-            <button type="button" className="icon-button" aria-label="Close user details" onClick={() => setSelectedUser(null)}>x</button>
+            <button type="button" className="icon-button" aria-label="Close user details" onClick={() => setSelectedUser(null)}>✕</button>
           </div>
           <span className={`status-badge ${selectedUser.status.toLowerCase()}`}>{selectedUser.status}</span>
           <div className="profile-details">
@@ -134,11 +167,34 @@ function Users() {
             <div><span>Access level</span><strong>{selectedUser.role}</strong></div>
             <div><span>Account ID</span><strong>USR-{String(selectedUser.id).padStart(4, '0')}</strong></div>
           </div>
-          <button type="button" className="primary-button full-button">Edit permissions</button>
+          <button
+            type="button"
+            className="primary-button full-button"
+            onClick={() => setShowPermissionsModal(true)}
+          >
+            Edit permissions
+          </button>
         </aside>
+      )}
+
+      {/* Add User Modal */}
+      <AddUserModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onAddUser={handleAddUser}
+      />
+
+      {/* Edit Permissions Modal */}
+      {showPermissionsModal && selectedUser && (
+        <EditPermissionsModal
+          user={selectedUser}
+          onClose={() => setShowPermissionsModal(false)}
+          onSave={handleSavePermissions}
+        />
       )}
     </div>
   )
 }
 
 export default Users
+

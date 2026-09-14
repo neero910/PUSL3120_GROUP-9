@@ -1,4 +1,4 @@
-function ReservationTable({ reservations }) {
+function ReservationTable({ reservations, onView }) {
   return (
     <div className="panel">
       <div className="table-wrapper">
@@ -30,7 +30,13 @@ function ReservationTable({ reservations }) {
                 </td>
                 <td>{reservation.amount}</td>
                 <td>
-                  <button type="button" className="secondary-button">View</button>
+                  <button
+                    type="button"
+                    className="secondary-button small-button"
+                    onClick={() => onView?.(reservation)}
+                  >
+                    View
+                  </button>
                 </td>
               </tr>
             ))}

@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import PageHeader from '../components/layout/PageHeader'
 import GuestTable from '../components/guests/GuestTable'
+import AddGuestModal from '../components/guests/AddGuestModal'
+import GuestFullProfileModal from '../components/guests/GuestFullProfileModal'
 import { fetchApiData, normalizeGuest } from '../services/api'
 
 function Guests() {
@@ -9,6 +11,14 @@ function Guests() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('All Status')
   const [selectedGuest, setSelectedGuest] = useState(null)
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [showFullProfile, setShowFullProfile] = useState(false)
+  const [toastMessage, setToastMessage] = useState(null)
+
+  const showToast = (msg) => {
+    setToastMessage(msg)
+    setTimeout(() => setToastMessage(null), 3500)
+  }
 
   useEffect(() => {
     let isMounted = true
@@ -37,7 +47,7 @@ function Guests() {
 
     return guests.filter((guest) => {
       const matchesSearch = !normalizedSearch || [guest.name, guest.contact, guest.idNumber, guest.room]
-        .some((value) => value.toLowerCase().includes(normalizedSearch))
+        .some((value) => value && value.toLowerCase().includes(normalizedSearch))
       const matchesStatus = statusFilter === 'All Status' || guest.status === statusFilter
 
       return matchesSearch && matchesStatus
@@ -51,12 +61,43 @@ function Guests() {
     pending: guests.filter((guest) => guest.status === 'Pending').length,
   }
 
+  const handleAddGuest = (newGuestData) => {
+    const newGuest = {
+      id: `GST-${Date.now().toString().slice(-4)}`,
+      ...newGuestData
+    }
+    setGuests(prev => [newGuest, ...prev])
+    showToast(`Guest ${newGuest.name} registered successfully!`)
+  }
+
+  const handleGuestStatusChange = (guestId, newStatus) => {
+    setGuests(prev => prev.map(g => g.id === guestId ? { ...g, status: newStatus } : g))
+    if (selectedGuest && selectedGuest.id === guestId) {
+      setSelectedGuest(prev => ({ ...prev, status: newStatus }))
+    }
+    showToast(`Status updated to ${newStatus}`)
+  }
+
   return (
     <div className="page-stack">
+      {toastMessage && (
+        <div className="toast-notification">
+          <span>✓ {toastMessage}</span>
+        </div>
+      )}
+
       <PageHeader
         title="Guests"
         subtitle="Guest profile overview and current stays"
-        actions={<button type="button" className="primary-button">Add Guest</button>}
+        actions={
+          <button
+            type="button"
+            className="primary-button"
+            onClick={() => setShowAddModal(true)}
+          >
+            + Add Guest
+          </button>
+        }
       />
 
       <div className="directory-summary">
@@ -69,7 +110,13 @@ function Guests() {
       <div className="toolbar row-gap directory-toolbar">
         <div className="search-box">
           <span>⌕</span>
-          <input type="search" placeholder="Search by name, room, ID or phone" aria-label="Search guests" value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} />
+          <input
+            type="search"
+            placeholder="Search by name, room, ID or phone"
+            aria-label="Search guests"
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+          />
         </div>
         <select aria-label="Filter guest status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
           <option>All Status</option>
@@ -78,7 +125,11 @@ function Guests() {
           <option>Pending</option>
           <option>Checked Out</option>
         </select>
-        {(searchTerm || statusFilter !== 'All Status') && <button type="button" className="text-button" onClick={() => { setSearchTerm(''); setStatusFilter('All Status') }}>Clear filters</button>}
+        {(searchTerm || statusFilter !== 'All Status') && (
+          <button type="button" className="text-button" onClick={() => { setSearchTerm(''); setStatusFilter('All Status') }}>
+            Clear filters
+          </button>
+        )}
       </div>
 
       {isLoading ? (
@@ -94,7 +145,7 @@ function Guests() {
               <div className="large-avatar">{selectedGuest.name.split(' ').map((part) => part[0]).join('').slice(0, 2)}</div>
               <div><h3>{selectedGuest.name}</h3><p>Guest profile</p></div>
             </div>
-            <button type="button" className="icon-button" aria-label="Close guest profile" onClick={() => setSelectedGuest(null)}>x</button>
+            <button type="button" className="icon-button" aria-label="Close guest profile" onClick={() => setSelectedGuest(null)}>✕</button>
           </div>
           <span className={`status-badge ${selectedGuest.status.toLowerCase().replace(/\s+/g, '-')}`}>{selectedGuest.status}</span>
           <div className="profile-details">
@@ -103,11 +154,34 @@ function Guests() {
             <div><span>Room</span><strong>{selectedGuest.room}</strong></div>
             <div><span>Stay dates</span><strong>{selectedGuest.checkIn} to {selectedGuest.checkOut}</strong></div>
           </div>
-          <button type="button" className="primary-button full-button">Open full profile</button>
+          <button
+            type="button"
+            className="primary-button full-button"
+            onClick={() => setShowFullProfile(true)}
+          >
+            Open full profile
+          </button>
         </aside>
+      )}
+
+      {/* Add Guest Modal */}
+      <AddGuestModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onAddGuest={handleAddGuest}
+      />
+
+      {/* Full Profile Dossier Modal */}
+      {showFullProfile && selectedGuest && (
+        <GuestFullProfileModal
+          guest={selectedGuest}
+          onClose={() => setShowFullProfile(false)}
+          onStatusChange={handleGuestStatusChange}
+        />
       )}
     </div>
   )
 }
 
 export default Guests
+

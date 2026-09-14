@@ -52,7 +52,7 @@ const iconMap = {
   Settings: '⚙',
 }
 
-function Sidebar() {
+function Sidebar({ onCloseSidebar }) {
   const navigate = useNavigate()
   const { logout, user } = useAuth()
 
@@ -61,14 +61,30 @@ function Sidebar() {
     navigate('/login')
   }
 
+  const handleNavClick = () => {
+    if (onCloseSidebar) {
+      onCloseSidebar()
+    }
+  }
+
   return (
     <aside className="sidebar">
       <div className="brand-block">
         <div className="brand-mark">HS</div>
-        <div>
+        <div style={{ flex: 1 }}>
           <p className="eyebrow">HOTEL MANAGEMENT</p>
           <h2>Hotel Safron</h2>
         </div>
+        {onCloseSidebar && (
+          <button
+            type="button"
+            className="sidebar-close-btn"
+            onClick={onCloseSidebar}
+            aria-label="Close sidebar"
+          >
+            ✕
+          </button>
+        )}
       </div>
 
       <nav className="sidebar-nav" aria-label="Sidebar navigation">
@@ -76,6 +92,7 @@ function Sidebar() {
           <NavLink
             key={item.path}
             to={item.path}
+            onClick={handleNavClick}
             className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
           >
             <span className="nav-icon" aria-hidden="true">{iconMap[item.label] || '•'}</span>

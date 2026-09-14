@@ -1,38 +1,49 @@
-function ActivityTable({ title, rows, columns }) {
+function ActivityTable({ title, rows = [], columns = [] }) {
+  const isCheckIn = title.toLowerCase().includes('check-in')
+  const emptyIcon = isCheckIn ? '🛏️' : '🚪'
+
   return (
-    <div className="panel">
+    <div className="panel activity-panel">
       <div className="panel-title">{title}</div>
       <div className="panel-body">
         <div className="table-wrapper">
-        <table style={{ width: '100%' }}>
-          <thead>
-            <tr>
-              {columns.map((column) => (
-                <th key={column} style={{ textAlign: 'left', padding: '12px' }}>{column}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 ? (
+          <table className="activity-table">
+            <thead>
               <tr>
-                <td colSpan={columns.length} style={{ textAlign: 'center', color: 'var(--muted)', padding: '40px 20px', fontStyle: 'italic' }}>
-                  No entries for today
-                </td>
+                {columns.map((column) => (
+                  <th key={column}>{column}</th>
+                ))}
               </tr>
-            ) : rows.map((row, index) => (
-              <tr key={`${title}-${index}`} style={{ borderTop: '1px solid var(--border)' }}>
-                <td style={{ padding: '12px' }}>{row.guest}</td>
-                <td style={{ padding: '12px' }}>{row.room}</td>
-                <td style={{ padding: '12px' }}>{row.checkIn || row.checkOut}</td>
-                <td style={{ padding: '12px' }}>
-                  <span className={`status-badge ${row.status.toLowerCase().replace(/\s+/g, '-')}`}>
-                    {row.status}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rows.length === 0 ? (
+                <tr>
+                  <td colSpan={columns.length} className="empty-cell">
+                    <div className="activity-empty-state">
+                      <span className="activity-empty-icon">{emptyIcon}</span>
+                      <strong>No {isCheckIn ? 'check-ins' : 'check-outs'} for today</strong>
+                      <span>All expected guests are up to date.</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                rows.map((row, index) => (
+                  <tr key={`${title}-${index}`}>
+                    <td className="font-semibold">{row.guest}</td>
+                    <td>
+                      <span className="room-badge">Room {row.room}</span>
+                    </td>
+                    <td className="text-muted">{row.checkIn || row.checkOut}</td>
+                    <td>
+                      <span className={`status-badge ${(row.status || 'confirmed').toLowerCase().replace(/\s+/g, '-')}`}>
+                        {row.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -40,4 +51,5 @@ function ActivityTable({ title, rows, columns }) {
 }
 
 export default ActivityTable
+
 

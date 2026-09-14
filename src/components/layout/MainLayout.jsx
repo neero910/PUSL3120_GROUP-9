@@ -7,8 +7,16 @@ function MainLayout({ children, title }) {
 
   return (
     <div className="app-shell">
+      {sidebarOpen && (
+        <div
+          className="sidebar-backdrop"
+          onClick={() => setSidebarOpen(false)}
+          aria-label="Close navigation sidebar"
+        />
+      )}
+
       <div className={`sidebar-wrapper ${sidebarOpen ? 'open' : ''}`}>
-        <Sidebar />
+        <Sidebar onCloseSidebar={() => setSidebarOpen(false)} />
       </div>
 
       <div className="main-panel">

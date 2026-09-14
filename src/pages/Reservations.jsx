@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import io from 'socket.io-client'
 import PageHeader from '../components/layout/PageHeader'
 import ReservationTable from '../components/reservations/ReservationTable'
+import NewReservationModal from '../components/reservations/NewReservationModal'
+import ReservationDetailsModal from '../components/reservations/ReservationDetailsModal'
 import { reservationStatuses } from '../data/reservations'
 import { reservationsApi } from '../services/api'
 
@@ -25,23 +27,26 @@ function Reservations() {
   const [statusFilter, setStatusFilter] = useState(() => JSON.parse(localStorage.getItem('reservation-filters') || '{}').statusFilter || 'All')
   const [dateFilter, setDateFilter] = useState(() => JSON.parse(localStorage.getItem('reservation-filters') || '{}').dateFilter || '')
   const [reservations, setReservations] = useState([])
+  const [showNewModal, setShowNewModal] = useState(false)
+  const [selectedReservation, setSelectedReservation] = useState(null)
+  const [toastMessage, setToastMessage] = useState(null)
+
+  const showToast = (msg) => {
+    setToastMessage(msg)
+    setTimeout(() => setToastMessage(null), 3500)
+  }
 
   useEffect(() => {
     reservationsApi.getAll().then((response) => {
       setReservations((response.data || []).map(normalizeReservation))
     }).catch(() => setReservations([]))
 
-    // Determine WebSocket URL:
-    // 1. Use VITE_WS_URL if explicitly set (e.g., pointing to Render/Railway backend)
-    // 2. Fall back to localhost only during local development
-    // 3. Skip WebSocket silently in production when no WS URL is configured
     const wsUrl = import.meta.env.VITE_WS_URL ||
       (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
         ? 'http://localhost:5000'
         : null);
 
     if (!wsUrl) {
-      // Production without dedicated backend – skip WebSocket gracefully
       return;
     }
 
@@ -80,7 +85,7 @@ function Reservations() {
         reservation.checkOut,
         reservation.status,
       ]
-      const matchesSearch = !normalizedSearch || searchableValues.some((value) => value.toLowerCase().includes(normalizedSearch))
+      const matchesSearch = !normalizedSearch || searchableValues.some((value) => value && value.toLowerCase().includes(normalizedSearch))
       const matchesStatus = statusFilter === 'All' || reservation.status === statusFilter
       const matchesDate = !dateFilter || (reservation.checkIn <= dateFilter && reservation.checkOut >= dateFilter)
 
@@ -96,18 +101,51 @@ function Reservations() {
     setDateFilter('')
   }
 
+  const handleAddReservation = (newRes) => {
+    setReservations(prev => [newRes, ...prev])
+    showToast(`Reservation #${newRes.id} confirmed for ${newRes.guest}!`)
+  }
+
+  const handleUpdateStatus = (id, newStatus) => {
+    setReservations(prev => prev.map(r => r.id === id ? { ...r, status: newStatus } : r))
+    if (selectedReservation && selectedReservation.id === id) {
+      setSelectedReservation(prev => ({ ...prev, status: newStatus }))
+    }
+    showToast(`Reservation #${id} marked as ${newStatus}`)
+  }
+
   return (
     <div className="page-stack">
+      {toastMessage && (
+        <div className="toast-notification">
+          <span>✓ {toastMessage}</span>
+        </div>
+      )}
+
       <PageHeader
         title="Reservations"
         subtitle="Upcoming and active bookings"
-        actions={<button type="button" className="primary-button">New Reservation</button>}
+        actions={
+          <button
+            type="button"
+            className="primary-button"
+            onClick={() => setShowNewModal(true)}
+          >
+            + New Reservation
+          </button>
+        }
       />
 
       <div className="toolbar row-gap reservation-toolbar">
         <div className="search-box">
           <span aria-hidden="true">⌕</span>
-          <input type="search" placeholder="Search guest, room or reservation ID" aria-label="Search reservations" value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} />
+          <input
+            type="search"
+            placeholder="Search guest, room or reservation ID"
+            aria-label="Search reservations"
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+          />
         </div>
         <select aria-label="Filter reservation status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
           {reservationStatuses.map((status) => (
@@ -126,9 +164,29 @@ function Reservations() {
         {hasActiveFilters && <span>matching your filters</span>}
       </div>
 
-      <ReservationTable reservations={filteredReservations} />
+      <ReservationTable
+        reservations={filteredReservations}
+        onView={(res) => setSelectedReservation(res)}
+      />
+
+      {/* New Reservation Modal */}
+      <NewReservationModal
+        isOpen={showNewModal}
+        onClose={() => setShowNewModal(false)}
+        onAddReservation={handleAddReservation}
+      />
+
+      {/* Reservation Details Modal */}
+      {selectedReservation && (
+        <ReservationDetailsModal
+          reservation={selectedReservation}
+          onClose={() => setSelectedReservation(null)}
+          onUpdateStatus={handleUpdateStatus}
+        />
+      )}
     </div>
   )
 }
 
 export default Reservations
+
